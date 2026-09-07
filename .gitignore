@@ -4,3 +4,4 @@ target/
 data/*.db
 data/*.db-*
 *.iml
+.DS_Store
