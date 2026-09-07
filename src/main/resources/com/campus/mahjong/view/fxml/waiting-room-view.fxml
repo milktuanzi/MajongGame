@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.campus.mahjong.controller.page.WaitingRoomController" styleClass="app-root">
+    <BorderPane maxWidth="1360" styleClass="page-shell">
+        <top><HBox alignment="CENTER_LEFT" spacing="12" styleClass="top-bar"><Button text="‹ 离开房间" onAction="#leaveRoom" styleClass="ghost-button"/><Region HBox.hgrow="ALWAYS"/><Label text="好友房等待区" styleClass="brand-title"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="ownerBadge" styleClass="offline-badge"/></HBox></top>
+        <center>
+            <VBox alignment="TOP_CENTER" spacing="20">
+                <padding><Insets top="35" right="70" bottom="30" left="70"/></padding>
+                <VBox alignment="CENTER" spacing="5"><Label text="房间码" styleClass="section-subtitle"/><Label fx:id="roomCodeLabel" styleClass="room-code-large"/><Button text="复制并邀请好友" onAction="#copyRoomCode" styleClass="secondary-button"/><Label fx:id="settingsLabel" styleClass="selected-hint"/></VBox>
+                <GridPane hgap="16" maxWidth="930">
+                    <columnConstraints><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/></columnConstraints>
+                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-ready" GridPane.columnIndex="0"><StackPane styleClass="seat-avatar"><Label text="东"/></StackPane><Label fx:id="player1Name" styleClass="seat-name"/><Label text="已连接" styleClass="ready-text"/></VBox>
+                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-ready" GridPane.columnIndex="1"><StackPane styleClass="seat-avatar"><Label text="南"/></StackPane><Label text="山海客" styleClass="seat-name"/><Label text="已准备" styleClass="ready-text"/></VBox>
+                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card" GridPane.columnIndex="2"><StackPane styleClass="seat-avatar"><Label text="西"/></StackPane><Label text="小满" styleClass="seat-name"/><Label text="未准备" styleClass="waiting-text"/></VBox>
+                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-empty" GridPane.columnIndex="3"><StackPane styleClass="seat-avatar"><Label text="＋"/></StackPane><Label text="等待好友加入" styleClass="seat-name"/><Label text="分享房间码" styleClass="waiting-text"/></VBox>
+                </GridPane>
+                <VBox alignment="CENTER" spacing="12" maxWidth="560" styleClass="setup-card">
+                    <Label fx:id="roomStatusLabel" text="已有 3/4 位玩家进入，等待最后一位好友…" styleClass="setup-title" wrapText="true"/>
+                    <ProgressBar progress="0.75" maxWidth="Infinity" styleClass="room-progress"/>
+                    <HBox alignment="CENTER" spacing="12"><Button fx:id="readyButton" text="准备" onAction="#toggleReady" styleClass="secondary-button"/><Button fx:id="startButton" text="房主开始游戏  ›" onAction="#startGame" styleClass="primary-button"/></HBox>
+                    <Label text="Demo 中可由房主直接开始；正式联机实现应在玩家到齐并全部准备后启用。" styleClass="privacy-tip" wrapText="true"/>
+                </VBox>
+            </VBox>
+        </center>
+        <bottom><HBox alignment="CENTER" styleClass="bottom-bar"><Label text="房间状态会实时同步到所有已连接电脑，断线玩家可自动重连。" styleClass="bottom-copy"/></HBox></bottom>
+    </BorderPane>
+</StackPane>

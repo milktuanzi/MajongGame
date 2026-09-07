@@ -1,0 +1,122 @@
+.app-root {
+    -fx-font-family: "Microsoft YaHei UI", "Segoe UI";
+    -fx-background-color: #f4f8ee;
+    -fx-background-image: url("../image/mahjong-home-bg-light.png");
+    -fx-background-size: cover;
+    -fx-background-position: center;
+}
+.page-shell { -fx-background-color: linear-gradient(to right, rgba(255,252,244,.92), rgba(247,252,240,.84) 62%, rgba(246,250,237,.72)); }
+.top-bar {
+    -fx-padding: 15 34; -fx-background-color: rgba(255,255,255,.88);
+    -fx-border-color: transparent transparent rgba(78,137,102,.15) transparent;
+}
+.brand-seal {
+    -fx-min-width: 44; -fx-min-height: 44; -fx-max-width: 44; -fx-max-height: 44;
+    -fx-background-color: #ef6b5b; -fx-background-radius: 13;
+    -fx-effect: dropshadow(gaussian, rgba(226,95,76,.2), 12, .15, 0, 3);
+}
+.brand-seal-text { -fx-text-fill: white; -fx-font-size: 24; -fx-font-family: "SimSun"; }
+.brand-title { -fx-text-fill: #235d47; -fx-font-size: 21; -fx-font-weight: bold; }
+.brand-subtitle { -fx-text-fill: #7c988b; -fx-font-size: 11; }
+.offline-badge {
+    -fx-background-color: #e5f6e9; -fx-background-radius: 13; -fx-padding: 5 10;
+    -fx-text-fill: #3b875d; -fx-font-size: 11; -fx-font-weight: bold;
+}
+.local-tip { -fx-text-fill: #73897e; -fx-font-size: 11; }
+.profile-card { -fx-background-color: #f4f8f1; -fx-background-radius: 22; -fx-padding: 5 11; }
+.avatar { -fx-min-width: 35; -fx-min-height: 35; -fx-max-width: 35; -fx-max-height: 35; -fx-background-color: #74bd92; -fx-background-radius: 18; }
+.avatar-text { -fx-text-fill: white; -fx-font-size: 16; }
+.nickname { -fx-text-fill: #315f4d; -fx-font-weight: bold; }
+.profile-tip { -fx-text-fill: #8ca096; -fx-font-size: 10; }
+.eyebrow { -fx-text-fill: #df6b57; -fx-font-size: 13; -fx-font-weight: bold; }
+.hero-title { -fx-text-fill: #254e3e; -fx-font-size: 34; -fx-font-family: "SimSun"; -fx-font-weight: bold; }
+.hero-description { -fx-text-fill: #688075; -fx-font-size: 13; -fx-line-spacing: 4; }
+.content-card, .setup-card, .history-card {
+    -fx-background-color: rgba(255,255,255,.94); -fx-background-radius: 18;
+    -fx-border-color: rgba(76,139,103,.15); -fx-border-radius: 18;
+    -fx-effect: dropshadow(gaussian, rgba(74,105,88,.13), 22, .12, 0, 7);
+}
+.content-card { -fx-padding: 20; }
+.setup-card { -fx-padding: 23; }
+.history-card { -fx-padding: 13 16; }
+.section-title, .setup-title { -fx-text-fill: #315d4b; -fx-font-size: 19; -fx-font-weight: bold; }
+.setup-title { -fx-font-size: 22; }
+.section-subtitle { -fx-text-fill: #8a9b93; -fx-font-size: 11; }
+.selected-hint { -fx-text-fill: #4d9a6d; -fx-background-color: #eaf7ed; -fx-background-radius: 12; -fx-padding: 5 10; }
+.mode-card {
+    -fx-alignment: CENTER_LEFT; -fx-text-alignment: left; -fx-background-color: #f7faf6; -fx-background-radius: 12;
+    -fx-border-color: #e2ebe4; -fx-border-radius: 12; -fx-text-fill: #476457; -fx-font-size: 13;
+    -fx-font-weight: bold; -fx-line-spacing: 5; -fx-padding: 14 16; -fx-cursor: hand;
+}
+.mode-card:hover { -fx-background-color: #eff8f0; -fx-border-color: #8dc9a5; -fx-translate-y: -1; }
+.mode-card.selected { -fx-background-color: #e7f6eb; -fx-border-color: #55a978; -fx-border-width: 1.5; -fx-text-fill: #26704a; }
+.history-icon { -fx-min-width: 38; -fx-min-height: 38; -fx-max-width: 38; -fx-max-height: 38; -fx-background-color: #fff0df; -fx-background-radius: 12; }
+.history-icon-text { -fx-text-fill: #df7c52; -fx-font-weight: bold; }
+.history-title { -fx-text-fill: #425d51; -fx-font-weight: bold; }
+.history-description { -fx-text-fill: #8c9a93; -fx-font-size: 11; }
+.field-label { -fx-text-fill: #536e62; -fx-font-size: 12; -fx-font-weight: bold; }
+.choice-button, .secondary-button, .ghost-button {
+    -fx-background-color: #f4f7f3; -fx-background-radius: 9; -fx-border-color: #dfe8e1;
+    -fx-border-radius: 9; -fx-text-fill: #5d7469; -fx-padding: 8 12; -fx-cursor: hand;
+}
+.choice-button:hover, .secondary-button:hover, .ghost-button:hover { -fx-background-color: #eaf4ec; -fx-text-fill: #30704f; }
+.choice-button.selected { -fx-background-color: #daf1e1; -fx-border-color: #63ad7e; -fx-text-fill: #28714a; -fx-font-weight: bold; }
+.secondary-button { -fx-background-color: #fff4e7; -fx-border-color: #f4d9b8; -fx-text-fill: #bb6e43; }
+.ghost-button { -fx-background-color: transparent; -fx-border-color: transparent; }
+.player-field, .form-select {
+    -fx-background-color: #f8faf7; -fx-background-radius: 9; -fx-border-color: #dfe7e1;
+    -fx-border-radius: 9; -fx-text-fill: #425e51; -fx-padding: 8 10;
+}
+.player-field:focused, .form-select:focused { -fx-border-color: #66ad81; -fx-background-color: white; }
+.player-field:disabled { -fx-opacity: .42; }
+.form-select .list-cell { -fx-text-fill: #425e51; }
+.summary-label { -fx-background-color: #f0f7ec; -fx-background-radius: 10; -fx-text-fill: #4a765e; -fx-padding: 10 12; -fx-font-size: 12; }
+.primary-button {
+    -fx-background-color: linear-gradient(to right, #56ac79, #72bd8d); -fx-background-radius: 11;
+    -fx-text-fill: white; -fx-font-size: 15; -fx-font-weight: bold; -fx-padding: 12 20; -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(62,143,94,.22), 15, .16, 0, 4);
+}
+.primary-button:hover { -fx-background-color: linear-gradient(to right, #429b68, #61ae7d); }
+.privacy-tip { -fx-text-fill: #9aa7a0; -fx-font-size: 10; -fx-alignment: CENTER; }
+.bottom-bar { -fx-background-color: rgba(255,255,255,.9); -fx-padding: 11 34; -fx-border-color: rgba(77,137,102,.13) transparent transparent transparent; }
+.bottom-title { -fx-text-fill: #3e7159; -fx-font-weight: bold; }
+.bottom-copy { -fx-text-fill: #91a099; -fx-font-size: 11; }
+.toast-pane { -fx-padding: 7; }
+.toast-label { -fx-background-color: rgba(47,104,76,.94); -fx-background-radius: 18; -fx-text-fill: white; -fx-padding: 8 18; }
+
+.rank-first, .rank-number { -fx-min-width: 24; -fx-font-weight: bold; -fx-text-fill: #ef8b45; }
+.rank-number { -fx-text-fill: #8ba096; }
+.rank-name { -fx-text-fill: #496458; }
+.rank-score { -fx-text-fill: #34835a; -fx-font-weight: bold; }
+.room-code-field { -fx-font-size: 16; -fx-font-weight: bold; -fx-alignment: CENTER; -fx-background-color: #f8faf7; -fx-background-radius: 9; -fx-border-color: #dfe7e1; -fx-border-radius: 9; }
+.static-field { -fx-background-color: #f8faf7; -fx-background-radius: 9; -fx-border-color: #dfe7e1; -fx-border-radius: 9; -fx-padding: 9 12; -fx-text-fill: #425e51; }
+.error-label { -fx-text-fill: #d65348; -fx-font-size: 11; }
+.room-code-large { -fx-font-size: 38; -fx-font-weight: bold; -fx-text-fill: #2c7653; }
+.seat-card { -fx-background-color: rgba(255,255,255,.94); -fx-background-radius: 16; -fx-border-color: #dfe9e1; -fx-border-radius: 16; -fx-padding: 24 14; }
+.seat-card.seat-ready { -fx-border-color: #7dc399; -fx-background-color: rgba(240,251,242,.96); }
+.seat-card.seat-empty { -fx-border-style: segments(6, 5); -fx-background-color: rgba(255,255,255,.7); }
+.seat-avatar { -fx-min-width: 58; -fx-min-height: 58; -fx-max-width: 58; -fx-max-height: 58; -fx-background-color: #e0f2e5; -fx-background-radius: 29; -fx-text-fill: #38805a; -fx-font-size: 19; }
+.seat-name { -fx-text-fill: #365b4b; -fx-font-weight: bold; }
+.ready-text { -fx-text-fill: #43a16a; -fx-font-size: 11; }
+.waiting-text { -fx-text-fill: #9aaaa2; -fx-font-size: 11; }
+.room-progress .bar { -fx-background-color: #67b886; }
+.room-progress .track { -fx-background-color: #e7eee9; }
+
+.game-root { -fx-font-family: "Microsoft YaHei UI"; -fx-background-color: #aedbbd; }
+.game-top { -fx-padding: 12 24; -fx-background-color: rgba(255,255,255,.9); }
+.game-round { -fx-text-fill: #286849; -fx-font-size: 17; -fx-font-weight: bold; }
+.game-meta { -fx-text-fill: #5e796d; }
+.opponent-name, .player-self { -fx-text-fill: #285e47; -fx-font-weight: bold; -fx-background-color: rgba(255,255,255,.75); -fx-background-radius: 12; -fx-padding: 5 10; }
+.dealer-mark { -fx-background-color: #ef725c; -fx-background-radius: 20; -fx-text-fill: white; -fx-font-size: 18; -fx-padding: 9 13; }
+.tile-back { -fx-background-color: #5ca078; -fx-background-radius: 5; -fx-text-fill: #e8f6ed; -fx-font-size: 24; -fx-padding: 8 6; }
+.discard-tile { -fx-background-color: #fffdf4; -fx-background-radius: 5; -fx-border-color: #d8d2bc; -fx-border-radius: 5; -fx-text-fill: #315c49; -fx-padding: 8 7; }
+.hand-area { -fx-padding: 14 20 18 20; -fx-background-color: rgba(245,251,246,.88); }
+.hand-tile { -fx-background-color: #fffdf4; -fx-background-radius: 6; -fx-border-color: #d4cdb6; -fx-border-radius: 6; -fx-text-fill: #27563f; -fx-font-weight: bold; -fx-padding: 18 9; -fx-cursor: hand; }
+.hand-tile:hover { -fx-translate-y: -7; -fx-border-color: #e46f5a; }
+.action-button { -fx-background-color: #fff5df; -fx-background-radius: 10; -fx-border-color: #ebcc91; -fx-border-radius: 10; -fx-text-fill: #9b6b25; -fx-padding: 9 18; }
+
+.settlement-row, .settlement-winner { -fx-spacing: 14; -fx-padding: 12 8; -fx-border-color: transparent transparent #edf1ed transparent; }
+.settlement-winner { -fx-background-color: #eff9f1; -fx-background-radius: 12; }
+.settlement-name { -fx-text-fill: #365b4b; -fx-font-weight: bold; }
+.score-positive { -fx-text-fill: #31a263; -fx-font-size: 20; -fx-font-weight: bold; -fx-min-width: 60; }
+.score-negative { -fx-text-fill: #dc6656; -fx-font-size: 16; -fx-font-weight: bold; -fx-min-width: 60; }

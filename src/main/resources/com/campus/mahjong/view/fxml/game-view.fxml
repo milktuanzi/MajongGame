@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.campus.mahjong.controller.page.GameController" styleClass="game-root">
+    <BorderPane>
+        <top><HBox alignment="CENTER_LEFT" spacing="15" styleClass="game-top"><Label fx:id="roundLabel" styleClass="game-round"/><Label text="房间 836204" styleClass="game-meta"/><Region HBox.hgrow="ALWAYS"/><Label text="牌墙剩余 56 张" styleClass="game-meta"/><Button text="退出演示" onAction="#returnHome" styleClass="ghost-button"/></HBox></top>
+        <center>
+            <StackPane>
+                <VBox alignment="TOP_CENTER" spacing="10" StackPane.alignment="TOP_CENTER"><Label text="山海客 · 北" styleClass="opponent-name"/><HBox spacing="3"><Label text="▥" styleClass="tile-back"/><Label text="▥" styleClass="tile-back"/><Label text="▥" styleClass="tile-back"/><Label text="▥" styleClass="tile-back"/><Label text="▥" styleClass="tile-back"/></HBox></VBox>
+                <VBox alignment="CENTER" spacing="12"><Label text="东" styleClass="dealer-mark"/><FlowPane alignment="CENTER" hgap="5" vgap="5" maxWidth="360"><Label text="一万" styleClass="discard-tile"/><Label text="三筒" styleClass="discard-tile"/><Label text="九条" styleClass="discard-tile"/><Label text="中" styleClass="discard-tile"/><Label text="五万" styleClass="discard-tile"/><Label text="北" styleClass="discard-tile"/></FlowPane><Label fx:id="actionTip" text="轮到山海客出牌" styleClass="game-meta"/></VBox>
+                <VBox alignment="CENTER" spacing="10" StackPane.alignment="CENTER_LEFT"><Label text="小满 · 西" styleClass="opponent-name"/><VBox spacing="3"><Label text="▥" styleClass="tile-back"/><Label text="▥" styleClass="tile-back"/><Label text="▥" styleClass="tile-back"/></VBox></VBox>
+                <VBox alignment="CENTER" spacing="10" StackPane.alignment="CENTER_RIGHT"><Label text="知夏 · 南" styleClass="opponent-name"/><VBox spacing="3"><Label text="▥" styleClass="tile-back"/><Label text="▥" styleClass="tile-back"/><Label text="▥" styleClass="tile-back"/></VBox></VBox>
+            </StackPane>
+        </center>
+        <bottom><VBox alignment="CENTER" spacing="10" styleClass="hand-area"><HBox alignment="CENTER" spacing="5"><Button text="一万" onAction="#performAction" styleClass="hand-tile"/><Button text="二万" onAction="#performAction" styleClass="hand-tile"/><Button text="三万" onAction="#performAction" styleClass="hand-tile"/><Button text="五筒" onAction="#performAction" styleClass="hand-tile"/><Button text="五筒" onAction="#performAction" styleClass="hand-tile"/><Button text="六筒" onAction="#performAction" styleClass="hand-tile"/><Button text="一条" onAction="#performAction" styleClass="hand-tile"/><Button text="二条" onAction="#performAction" styleClass="hand-tile"/><Button text="三条" onAction="#performAction" styleClass="hand-tile"/><Button text="中" onAction="#performAction" styleClass="hand-tile"/><Button text="中" onAction="#performAction" styleClass="hand-tile"/><Button text="东" onAction="#performAction" styleClass="hand-tile"/><Button text="东" onAction="#performAction" styleClass="hand-tile"/></HBox><HBox alignment="CENTER" spacing="10"><Label fx:id="playerLabel" styleClass="player-self"/><Button text="碰" onAction="#performAction" styleClass="action-button"/><Button text="杠" onAction="#performAction" styleClass="action-button"/><Button text="胡" onAction="#finishDemoRound" styleClass="primary-button"/><Button text="模拟本局结束" onAction="#finishDemoRound" styleClass="secondary-button"/></HBox></VBox></bottom>
+    </BorderPane>
+</StackPane>
