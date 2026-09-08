@@ -4,13 +4,21 @@ import com.campus.mahjong.model.common.MahjongTypes.ModeCode;
 import com.campus.mahjong.controller.navigation.AppNavigator;
 import com.campus.mahjong.model.session.DemoSession;
 import com.campus.mahjong.infrastructure.persistence.LocalDataServices;
+import com.campus.mahjong.infrastructure.network.client.LanInvitation;
+import com.campus.mahjong.infrastructure.network.client.LanSession;
+import com.campus.mahjong.model.common.MahjongTypes.FriendRoomSettings;
+import com.campus.mahjong.model.common.MahjongTypes.PlayerId;
 import com.campus.mahjong.model.common.MahjongTypes.PlayerProfile;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.application.Platform;
 import javafx.scene.control.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletionStage;
 
 /** 联机好友房入口：创建房间或输入邀请码加入。 */
 public final class HomeController {
@@ -31,6 +39,8 @@ public final class HomeController {
     @FXML private Button changsha;
     @FXML private Button northern;
     @FXML private Button redCenter;
+    @FXML private Button createButton;
+    @FXML private Button joinButton;
 
     private final Map<String, ModeCode> modes = Map.of(
             "sichuan", ModeCode.SICHUAN, "changsha", ModeCode.CHANGSHA,
@@ -65,23 +75,23 @@ public final class HomeController {
     @FXML
     private void createRoom() {
         if (!validNickname()) return;
-        savePlayer();
-        DemoSession.createRoom(nicknameField.getText().trim(), selectedMode,
-                roundsBox.getValue(), multiplierBox.getValue(), scoreCapBox.getValue());
-        AppNavigator.waitingRoom();
+        PlayerProfile player = savePlayer();
+        FriendRoomSettings settings = new FriendRoomSettings(selectedMode,
+                number(multiplierBox.getValue()), scoreCap(), number(roundsBox.getValue()), false, "");
+        connect(LanSession.host(player, settings), "正在启动房主服务器…");
     }
 
     @FXML
     private void joinRoom() {
         if (!validNickname()) return;
-        String code = roomCodeField.getText() == null ? "" : roomCodeField.getText().trim();
-        if (!code.matches("\\d{6}")) {
-            errorLabel.setText("请输入房主提供的 6 位房间码");
+        String invitation = roomCodeField.getText() == null ? "" : roomCodeField.getText().trim();
+        try {
+            LanInvitation.parse(invitation);
+        } catch (IllegalArgumentException exception) {
+            errorLabel.setText(exception.getMessage());
             return;
         }
-        savePlayer();
-        DemoSession.joinRoom(nicknameField.getText().trim(), code);
-        AppNavigator.waitingRoom();
+        connect(LanSession.join(savePlayer(), invitation), "正在连接房主电脑…");
     }
 
     private boolean validNickname() {
@@ -116,8 +126,46 @@ public final class HomeController {
         }
     }
 
-    private void savePlayer() {
+    private PlayerProfile savePlayer() {
         String name = nicknameField.getText().trim();
-        LocalDataServices.players().save(new PlayerProfile(DemoSession.playerId(name), name, "", 0, 1));
+        PlayerId id = LocalDataServices.players().findByNickname(name)
+                .map(PlayerProfile::id).orElseGet(() -> new PlayerId(UUID.randomUUID().toString()));
+        PlayerProfile profile = new PlayerProfile(id, name, "", 0, 1);
+        LocalDataServices.players().save(profile);
+        DemoSession.nickname = name;
+        return profile;
+    }
+
+    private void connect(CompletionStage<LanSession> connection, String progress) {
+        setBusy(true);
+        errorLabel.setText(progress);
+        connection.whenComplete((session, error) -> Platform.runLater(() -> {
+            setBusy(false);
+            if (error != null) {
+                errorLabel.setText(rootMessage(error));
+                return;
+            }
+            LanSession.install(session);
+            errorLabel.setText("");
+            AppNavigator.waitingRoom();
+        }));
+    }
+
+    private void setBusy(boolean busy) {
+        createButton.setDisable(busy);
+        joinButton.setDisable(busy);
+    }
+
+    private int number(String text) { return Integer.parseInt(text.replaceAll("\\D", "")); }
+
+    private Optional<Integer> scoreCap() {
+        return "不封顶".equals(scoreCapBox.getValue())
+                ? Optional.empty() : Optional.of(number(scoreCapBox.getValue()));
+    }
+
+    private String rootMessage(Throwable error) {
+        Throwable current = error;
+        while (current.getCause() != null) current = current.getCause();
+        return current.getMessage() == null ? "连接失败，请检查热点和防火墙" : current.getMessage();
     }
 }

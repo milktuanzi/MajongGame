@@ -45,10 +45,10 @@ public final class InMemoryGameSessionService implements GameSessionService {
     public CompletionStage<List<ActionOption>> availableActions(GameId gameId, PlayerId playerId) {
         try {
             Context context = require(gameId);
-            Seat seat = context.seatOf(playerId);
-            List<ActionOption> options = context.round.legalActions(seat).stream()
-                    .map(type -> new ActionOption(type, List.of(), false)).toList();
-            return CompletableFuture.completedFuture(options);
+            synchronized (context) {
+                Seat seat = context.seatOf(playerId);
+                return CompletableFuture.completedFuture(actionOptions(context.round, seat));
+            }
         } catch (RuntimeException exception) {
             return CompletableFuture.failedFuture(exception);
         }
@@ -104,7 +104,7 @@ public final class InMemoryGameSessionService implements GameSessionService {
             case PASS -> round.submitClaim(seat, PlayerActionType.PASS, request.expectedRevision());
             case GANG -> {
                 if (round.phase() == RoundPhase.WAITING_FOR_DISCARD)
-                    round.declareConcealedGang(seat, requiredTile(request), request.expectedRevision());
+                    round.declareSelfGang(seat, requiredTile(request), request.expectedRevision());
                 else round.submitClaim(seat, PlayerActionType.GANG, request.expectedRevision());
             }
             default -> throw new IllegalArgumentException("暂不支持操作: " + request.type());
@@ -128,9 +128,21 @@ public final class InMemoryGameSessionService implements GameSessionService {
                     discardTiles, groups, 0, true));
         }
         GameStatus status = round.phase() == RoundPhase.FINISHED ? GameStatus.SETTLING : GameStatus.PLAYING;
-        List<Tile> ownHand = round.hand(viewerSeat).stream().map(tile -> new Tile(tile.displayName())).toList();
+        List<Tile> ownHand = round.organizedHand(viewerSeat).stream()
+                .map(tile -> new Tile(tile.displayName())).toList();
+        Optional<Tile> drawnTile = round.drawnTile(viewerSeat).map(tile -> new Tile(tile.displayName()));
         return new GameSnapshot(context.gameId, context.roomId, status, context.roundNumber,
-                Seat.EAST, round.currentTurn(), players, ownHand, List.of(), round.revision());
+                Seat.EAST, round.currentTurn(), players, ownHand, drawnTile,
+                actionOptions(round, viewerSeat), round.wallRemaining(), round.revision());
+    }
+
+    private List<ActionOption> actionOptions(MahjongRound round, Seat seat) {
+        return round.legalActions(seat).stream().map(type -> {
+            List<Tile> related = type == PlayerActionType.GANG
+                    ? round.selfGangTiles(seat).stream().map(tile -> new Tile(tile.displayName())).toList()
+                    : List.of();
+            return new ActionOption(type, related, false);
+        }).toList();
     }
 
     private synchronized Context require(GameId gameId) {

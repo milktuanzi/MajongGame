@@ -81,6 +81,7 @@ public final class MahjongRound {
 
     public EnumSet<PlayerActionType> legalActions(Seat seat) {
         EnumSet<PlayerActionType> actions = EnumSet.noneOf(PlayerActionType.class);
+        if (claimResponses.containsKey(seat)) return actions;
         if (phase == RoundPhase.WAITING_FOR_DISCARD && seat == currentTurn) {
             actions.add(PlayerActionType.DISCARD);
             if (regionalRule.canWin(hand(seat), melds.get(seat))) actions.add(PlayerActionType.HU);

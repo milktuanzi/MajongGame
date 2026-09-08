@@ -1,8 +1,15 @@
 package com.campus.mahjong.controller.page;
 
 import com.campus.mahjong.controller.navigation.AppNavigator;
+import com.campus.mahjong.infrastructure.network.client.LanSession;
+import com.campus.mahjong.model.common.MahjongTypes.ActionOption;
+import com.campus.mahjong.model.common.MahjongTypes.GameSnapshot;
+import com.campus.mahjong.model.common.MahjongTypes.GameStatus;
 import com.campus.mahjong.model.common.MahjongTypes.PlayerActionType;
+import com.campus.mahjong.model.common.MahjongTypes.PlayerPublicState;
+import com.campus.mahjong.model.common.MahjongTypes.RoomPlayer;
 import com.campus.mahjong.model.common.MahjongTypes.Seat;
+import com.campus.mahjong.model.common.MahjongTypes.Tile;
 import com.campus.mahjong.model.game.TileType;
 import com.campus.mahjong.model.game.Meld;
 import com.campus.mahjong.model.session.DemoSession;
@@ -13,6 +20,7 @@ import javafx.animation.ParallelTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.ScaleTransition;
 import javafx.animation.TranslateTransition;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -24,8 +32,10 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Optional;
 
-/** 四川麻将本地演示桌面的交互控制器。 */
+/** 同时支持本地演示和热点联机快照的牌桌控制器。 */
 public final class GameController {
     @FXML private Label roundLabel;
     @FXML private Label roomLabel;
@@ -45,6 +55,7 @@ public final class GameController {
     @FXML private FlowPane topDiscardPane;
     @FXML private Button discardButton;
     @FXML private Button passButton;
+    @FXML private Button chiButton;
     @FXML private Button pengButton;
     @FXML private Button gangButton;
     @FXML private Button huButton;
@@ -52,15 +63,57 @@ public final class GameController {
     private boolean selectedIsDrawn;
     private MahjongTileView selectedView;
     private PauseTransition simulationPause;
+    private LanSession lanSession;
+    private GameSnapshot networkGame;
+    private AutoCloseable gameSubscription;
 
     @FXML
     private void initialize() {
+        Optional<LanSession> current = LanSession.current();
+        if (current.isPresent() && current.get().currentGame().isPresent()) {
+            initializeNetworkGame(current.get());
+            return;
+        }
         roundLabel.setText("第 " + DemoSession.currentRound() + " / " + DemoSession.totalRounds() + " 轮");
         roomLabel.setText("房间 " + DemoSession.roomCode + " · 四川麻将（本地模拟）");
         renderPlayerPositions();
         scoreLabel.setText("本房积分 " + signed(DemoSession.roomScores().getOrDefault(DemoSession.nickname, 0L)));
         actionTip.setText("轮到你出牌；本轮摸到的牌位于最右侧");
         renderTable(true);
+    }
+
+    private void initializeNetworkGame(LanSession session) {
+        lanSession = session;
+        networkGame = session.currentGame().orElseThrow();
+        updateNetworkLabels();
+        renderPlayerPositions();
+        renderTable(true);
+        gameSubscription = session.observeGame(snapshot -> runOnFx(() -> {
+            boolean drewNewTile = networkGame == null || snapshot.revision() != networkGame.revision();
+            networkGame = snapshot;
+            clearSelection();
+            updateNetworkLabels();
+            renderPlayerPositions();
+            renderTable(drewNewTile);
+        }));
+    }
+
+    private void updateNetworkLabels() {
+        int totalRounds = lanSession.currentRoom().orElseThrow().settings().orElseThrow().rounds();
+        roundLabel.setText("第 " + networkGame.currentRound() + " / " + totalRounds + " 轮");
+        roomLabel.setText("热点房间 " + lanSession.invitation() + " · 服务端权威同步");
+        long score = localPublicState().map(PlayerPublicState::score).orElse(0L);
+        scoreLabel.setText("本房积分 " + signed(score));
+        EnumSet<PlayerActionType> actions = currentActions();
+        if (networkGame.status() == GameStatus.SETTLING) {
+            actionTip.setText("本局已经结束；联机结算页将在下一阶段接入");
+        } else if (actions.contains(PlayerActionType.DISCARD)) {
+            actionTip.setText("轮到你出牌；操作将提交给房主服务器校验");
+        } else if (actions.contains(PlayerActionType.PASS)) {
+            actionTip.setText("请响应上一张弃牌");
+        } else {
+            actionTip.setText("等待其他玩家操作…");
+        }
     }
 
     @FXML
@@ -81,6 +134,12 @@ public final class GameController {
         boolean isDrawn = selectedIsDrawn;
         ParallelTransition transition = new ParallelTransition(move, fade, scale);
         transition.setOnFinished(event -> {
+            if (lanSession != null) {
+                clearSelection();
+                handPane.setMouseTransparent(false);
+                submitNetworkAction(PlayerActionType.DISCARD, List.of(new Tile(tile)));
+                return;
+            }
             actionTip.setText(DemoSession.discard(tile, isDrawn));
             clearSelection();
             handPane.setMouseTransparent(false);
@@ -92,9 +151,20 @@ public final class GameController {
     }
 
     @FXML private void passAction() { applyClaim(PlayerActionType.PASS); }
+    @FXML private void chiAction() { applyClaim(PlayerActionType.CHI); }
     @FXML private void pengAction() { applyClaim(PlayerActionType.PENG); }
     @FXML
     private void gangAction() {
+        if (lanSession != null) {
+            boolean claim = currentActions().contains(PlayerActionType.PASS);
+            if (!claim && selectedTile == null) {
+                actionTip.setText("请选择一张可补杠或暗杠的手牌");
+                return;
+            }
+            submitNetworkAction(PlayerActionType.GANG,
+                    claim ? List.of() : List.of(new Tile(selectedTile)));
+            return;
+        }
         if (DemoSession.isAwaitingLocalClaim()) {
             applyClaim(PlayerActionType.GANG);
             return;
@@ -110,6 +180,10 @@ public final class GameController {
 
     @FXML
     private void winRound() {
+        if (lanSession != null) {
+            submitNetworkAction(PlayerActionType.HU, List.of());
+            return;
+        }
         try {
             DemoSession.declareLocalWin();
             AppNavigator.settlement();
@@ -119,9 +193,18 @@ public final class GameController {
         }
     }
 
-    @FXML private void returnHome() { AppNavigator.home(); }
+    @FXML
+    private void returnHome() {
+        closeGameSubscription();
+        if (lanSession != null) LanSession.closeCurrent();
+        AppNavigator.home();
+    }
 
     private void applyClaim(PlayerActionType action) {
+        if (lanSession != null) {
+            submitNetworkAction(action, List.of());
+            return;
+        }
         actionTip.setText(DemoSession.submitLocalClaim(action));
         clearSelection();
         renderTable(true);
@@ -129,14 +212,36 @@ public final class GameController {
         else scheduleSimulationStep();
     }
 
+    private void submitNetworkAction(PlayerActionType action, List<Tile> tiles) {
+        handPane.setMouseTransparent(true);
+        discardButton.setDisable(true);
+        actionTip.setText("正在等待房主服务器确认…");
+        lanSession.perform(action, tiles).whenComplete((result, error) -> runOnFx(() -> {
+            handPane.setMouseTransparent(false);
+            if (error != null) {
+                actionTip.setText(rootMessage(error));
+                renderActionButtons();
+                return;
+            }
+            actionTip.setText(result.message());
+            if (!result.accepted()) renderActionButtons();
+        }));
+    }
+
     private void renderTable(boolean animateDraw) {
         renderMelds();
         handPane.getChildren().clear();
-        boolean canDiscard = DemoSession.localActions().contains(PlayerActionType.DISCARD);
-        for (String tileName : DemoSession.organizedHand()) {
+        boolean canDiscard = currentActions().contains(PlayerActionType.DISCARD);
+        List<String> organizedHand = lanSession == null
+                ? DemoSession.organizedHand()
+                : networkGame.ownHand().stream().map(Tile::code).toList();
+        for (String tileName : organizedHand) {
             handPane.getChildren().add(createHandTile(tileName, false, canDiscard));
         }
-        DemoSession.drawnTile().ifPresent(tileName -> {
+        Optional<String> drawnTile = lanSession == null
+                ? DemoSession.drawnTile()
+                : networkGame.drawnTile().map(Tile::code);
+        drawnTile.ifPresent(tileName -> {
             Region gap = new Region();
             gap.setMinWidth(22); gap.setPrefWidth(22);
             handPane.getChildren().add(gap);
@@ -145,17 +250,18 @@ public final class GameController {
             if (animateDraw) animateDraw(drawn);
         });
 
-        Seat localSeat = DemoSession.localSeat();
+        Seat localSeat = localSeat();
         renderSeatDiscards(bottomDiscardPane, localSeat);
         renderSeatDiscards(rightDiscardPane, TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.RIGHT));
         renderSeatDiscards(topDiscardPane, TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.TOP));
         renderSeatDiscards(leftDiscardPane, TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.LEFT));
-        wallLabel.setText("牌墙剩余 " + DemoSession.remainingTiles() + " 张");
+        wallLabel.setText("牌墙剩余 " + (lanSession == null
+                ? DemoSession.remainingTiles() : networkGame.wallRemaining()) + " 张");
         renderActionButtons();
     }
 
     private void renderPlayerPositions() {
-        Seat localSeat = DemoSession.localSeat();
+        Seat localSeat = localSeat();
         playerLabel.setText(playerCaption(localSeat));
         rightPlayerLabel.setText(playerCaption(TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.RIGHT)));
         topPlayerLabel.setText(playerCaption(TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.TOP)));
@@ -164,7 +270,11 @@ public final class GameController {
 
     private void renderSeatDiscards(FlowPane pane, Seat seat) {
         pane.getChildren().clear();
-        DemoSession.discardsForSeat(seat).forEach(tileName -> {
+        List<String> discards = lanSession == null
+                ? DemoSession.discardsForSeat(seat)
+                : networkGame.players().stream().filter(player -> player.seat() == seat).findFirst()
+                .map(player -> player.discards().stream().map(Tile::code).toList()).orElse(List.of());
+        discards.forEach(tileName -> {
             MahjongTileView tile = new MahjongTileView(TileType.fromDisplayName(tileName), true);
             tile.setMouseTransparent(true);
             tile.getStyleClass().add("discarded-tile");
@@ -176,24 +286,36 @@ public final class GameController {
 
     private void renderMelds() {
         meldPane.getChildren().clear();
+        if (lanSession != null) {
+            localPublicState().ifPresent(player -> player.exposedGroups().forEach(group ->
+                    addMeldGroup(group.size() == 4 ? "杠" : group.size() == 3 ? "碰 / 吃" : "副露",
+                            group.stream().map(tile -> TileType.fromDisplayName(tile.code())).toList())));
+            meldPane.setVisible(!meldPane.getChildren().isEmpty());
+            meldPane.setManaged(!meldPane.getChildren().isEmpty());
+            return;
+        }
         for (Meld meld : DemoSession.localMelds()) {
-            Label kind = new Label(meld.type() == PlayerActionType.GANG ? "杠" : "碰");
-            kind.getStyleClass().add("meld-kind");
-            HBox tiles = new HBox(2);
-            tiles.setAlignment(javafx.geometry.Pos.CENTER);
-            for (TileType tileType : meld.tiles()) {
-                MahjongTileView tile = new MahjongTileView(tileType, false);
-                tile.getStyleClass().add("exposed-tile");
-                tile.setMouseTransparent(true);
-                tiles.getChildren().add(tile);
-            }
-            VBox group = new VBox(2, kind, tiles);
-            group.setAlignment(javafx.geometry.Pos.CENTER);
-            group.getStyleClass().add("meld-group");
-            meldPane.getChildren().add(group);
+            addMeldGroup(meld.type() == PlayerActionType.GANG ? "杠" : "碰", meld.tiles());
         }
         meldPane.setVisible(!meldPane.getChildren().isEmpty());
         meldPane.setManaged(!meldPane.getChildren().isEmpty());
+    }
+
+    private void addMeldGroup(String label, List<TileType> tileTypes) {
+        Label kind = new Label(label);
+        kind.getStyleClass().add("meld-kind");
+        HBox tiles = new HBox(2);
+        tiles.setAlignment(javafx.geometry.Pos.CENTER);
+        for (TileType tileType : tileTypes) {
+            MahjongTileView tile = new MahjongTileView(tileType, false);
+            tile.getStyleClass().add("exposed-tile");
+            tile.setMouseTransparent(true);
+            tiles.getChildren().add(tile);
+        }
+        VBox group = new VBox(2, kind, tiles);
+        group.setAlignment(javafx.geometry.Pos.CENTER);
+        group.getStyleClass().add("meld-group");
+        meldPane.getChildren().add(group);
     }
 
     private MahjongTileView createHandTile(String tileName, boolean drawn, boolean canDiscard) {
@@ -205,9 +327,11 @@ public final class GameController {
     }
 
     private void renderActionButtons() {
-        EnumSet<PlayerActionType> actions = DemoSession.localActions();
-        boolean claim = DemoSession.isAwaitingLocalClaim();
+        EnumSet<PlayerActionType> actions = currentActions();
+        boolean claim = lanSession == null
+                ? DemoSession.isAwaitingLocalClaim() : actions.contains(PlayerActionType.PASS);
         show(passButton, claim);
+        show(chiButton, claim && actions.contains(PlayerActionType.CHI));
         show(pengButton, claim && actions.contains(PlayerActionType.PENG));
         boolean selfGang = actions.contains(PlayerActionType.DISCARD) && actions.contains(PlayerActionType.GANG);
         show(gangButton, (claim || selfGang) && actions.contains(PlayerActionType.GANG));
@@ -217,11 +341,11 @@ public final class GameController {
         boolean mayDiscard = actions.contains(PlayerActionType.DISCARD);
         show(discardButton, mayDiscard);
         discardButton.setDisable(!mayDiscard || selectedTile == null);
-        if (claim) actionTip.setText("对手弃牌可响应，请选择碰、杠、胡或过");
+        if (claim) actionTip.setText("对手弃牌可响应，请选择吃、碰、杠、胡或过");
     }
 
     private void selectTile(MahjongTileView view, String tile, boolean drawn) {
-        if (!DemoSession.localActions().contains(PlayerActionType.DISCARD)) return;
+        if (!currentActions().contains(PlayerActionType.DISCARD)) return;
         handPane.getChildren().stream().filter(MahjongTileView.class::isInstance)
                 .map(MahjongTileView.class::cast).filter(item -> item != view)
                 .forEach(item -> returnToBase(item));
@@ -232,7 +356,7 @@ public final class GameController {
         selectedTileLabel.setText(drawn ? "已选：" + tile + "（本轮摸牌）" : "已选：" + tile);
         discardButton.setDisable(false);
         actionTip.setText("点击“打出选中牌”确认；确认后其余手牌自动整理");
-        if (DemoSession.localGangTiles().contains(tile)) {
+        if (localGangTiles().contains(tile)) {
             actionTip.setText("该牌可补杠/暗杠；点击“补 / 暗杠”确认，或继续打出");
         }
         TranslateTransition lift = new TranslateTransition(Duration.millis(110), view);
@@ -254,6 +378,7 @@ public final class GameController {
     }
 
     private void scheduleSimulationStep() {
+        if (lanSession != null) return;
         if (!DemoSession.shouldAdvanceSimulation()) return;
         if (simulationPause != null) simulationPause.stop();
         simulationPause = new PauseTransition(Duration.seconds(2));
@@ -276,7 +401,57 @@ public final class GameController {
 
     private void show(Node node, boolean visible) { node.setVisible(visible); node.setManaged(visible); }
     private String signed(long score) { return score > 0 ? "+" + score : String.valueOf(score); }
-    private String playerCaption(Seat seat) { return DemoSession.playerName(seat) + " · " + seatName(seat); }
+    private String playerCaption(Seat seat) {
+        if (lanSession == null) return DemoSession.playerName(seat) + " · " + seatName(seat);
+        String name = lanSession.currentRoom().orElseThrow().players().stream()
+                .filter(player -> player.seat() == seat).map(RoomPlayer::profile)
+                .map(profile -> profile.nickname() + (profile.id().equals(lanSession.localPlayer().id()) ? "（我）" : ""))
+                .findFirst().orElse("等待玩家");
+        return name + " · " + seatName(seat);
+    }
+
+    private EnumSet<PlayerActionType> currentActions() {
+        if (lanSession == null) return DemoSession.localActions();
+        EnumSet<PlayerActionType> actions = EnumSet.noneOf(PlayerActionType.class);
+        networkGame.availableActions().stream().map(ActionOption::type).forEach(actions::add);
+        return actions;
+    }
+
+    private List<String> localGangTiles() {
+        if (lanSession == null) return DemoSession.localGangTiles();
+        return networkGame.availableActions().stream()
+                .filter(option -> option.type() == PlayerActionType.GANG)
+                .flatMap(option -> option.relatedTiles().stream()).map(Tile::code).toList();
+    }
+
+    private Optional<PlayerPublicState> localPublicState() {
+        if (networkGame == null || lanSession == null) return Optional.empty();
+        return networkGame.players().stream()
+                .filter(player -> player.playerId().equals(lanSession.localPlayer().id())).findFirst();
+    }
+
+    private Seat localSeat() {
+        return lanSession == null ? DemoSession.localSeat()
+                : lanSession.currentRoom().orElseThrow().players().stream()
+                .filter(player -> player.profile().id().equals(lanSession.localPlayer().id()))
+                .map(RoomPlayer::seat).findFirst().orElseThrow();
+    }
+
+    private void closeGameSubscription() {
+        if (gameSubscription == null) return;
+        try { gameSubscription.close(); } catch (Exception ignored) {}
+        gameSubscription = null;
+    }
+
+    private void runOnFx(Runnable action) {
+        if (Platform.isFxApplicationThread()) action.run(); else Platform.runLater(action);
+    }
+
+    private String rootMessage(Throwable error) {
+        Throwable current = error;
+        while (current.getCause() != null) current = current.getCause();
+        return current.getMessage() == null ? "网络操作失败" : current.getMessage();
+    }
     private String seatName(Seat seat) {
         return switch (seat) {
             case EAST -> "东";
