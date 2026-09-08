@@ -5,20 +5,20 @@
 
 <StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.campus.mahjong.controller.page.SettlementController" styleClass="app-root">
-    <VBox alignment="CENTER" spacing="18" maxWidth="900">
-        <padding><Insets top="28" right="36" bottom="28" left="36"/></padding>
-        <VBox alignment="CENTER" spacing="4"><Label text="本局结算" styleClass="hero-title"/><Label text="第 1 轮完成 · 自摸" styleClass="selected-hint"/></VBox>
-        <VBox spacing="2" maxWidth="760" styleClass="setup-card">
-            <HBox alignment="CENTER_LEFT" styleClass="settlement-winner"><Label text="1" styleClass="rank-first"/><StackPane styleClass="avatar"><Label text="风" styleClass="avatar-text"/></StackPane><VBox><Label text="清风客（我）" styleClass="settlement-name"/><Label text="清一色 · 自摸 · 庄家" styleClass="section-subtitle"/></VBox><Region HBox.hgrow="ALWAYS"/><Label text="+64" styleClass="score-positive"/><Label text="累计 2,304" styleClass="rank-score"/></HBox>
-            <HBox alignment="CENTER_LEFT" styleClass="settlement-row"><Label text="2" styleClass="rank-number"/><Label text="山海客" styleClass="settlement-name"/><Region HBox.hgrow="ALWAYS"/><Label text="-16" styleClass="score-negative"/><Label text="累计 2,664" styleClass="rank-score"/></HBox>
-            <HBox alignment="CENTER_LEFT" styleClass="settlement-row"><Label text="3" styleClass="rank-number"/><Label text="小满" styleClass="settlement-name"/><Region HBox.hgrow="ALWAYS"/><Label text="-16" styleClass="score-negative"/><Label text="累计 1,844" styleClass="rank-score"/></HBox>
-            <HBox alignment="CENTER_LEFT" styleClass="settlement-row"><Label text="4" styleClass="rank-number"/><Label text="知夏" styleClass="settlement-name"/><Region HBox.hgrow="ALWAYS"/><Label text="-32" styleClass="score-negative"/><Label text="累计 1,420" styleClass="rank-score"/></HBox>
-        </VBox>
-        <HBox spacing="16" maxWidth="760">
-            <VBox spacing="8" HBox.hgrow="ALWAYS" styleClass="content-card"><Label text="本房间排名" styleClass="section-title"/><Label text="1  清风客       64 分" styleClass="rank-name"/><Label text="2  山海客      -16 分" styleClass="rank-name"/><Label text="3  小满        -16 分" styleClass="rank-name"/><Label text="4  知夏        -32 分" styleClass="rank-name"/></VBox>
-            <VBox spacing="8" HBox.hgrow="ALWAYS" styleClass="content-card"><Label text="好友累计积分" styleClass="section-title"/><Label text="1  山海客     2,664" styleClass="rank-name"/><Label text="2  清风客     2,304" styleClass="rank-name"/><Label text="3  小满       1,844" styleClass="rank-name"/><Label text="4  知夏       1,420" styleClass="rank-name"/></VBox>
-        </HBox>
-        <HBox alignment="CENTER" spacing="12"><Button text="返回首页" onAction="#returnHome" styleClass="secondary-button"/><Button text="下一轮  ›" onAction="#nextRound" styleClass="primary-button"/></HBox>
-        <Label text="结算结果由房主/服务端确认后同步，累计积分写入好友排行榜。" styleClass="privacy-tip"/>
-    </VBox>
+    <BorderPane maxWidth="1180" styleClass="page-shell">
+        <top><HBox alignment="CENTER_LEFT" styleClass="top-bar"><Label text="雀 隐" styleClass="brand-title"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="progressLabel" styleClass="selected-hint"/></HBox></top>
+        <center>
+            <VBox alignment="TOP_CENTER" spacing="18">
+                <padding><Insets top="28" right="55" bottom="28" left="55"/></padding>
+                <VBox alignment="CENTER" spacing="4"><Label fx:id="resultTitle" styleClass="hero-title"/><Label fx:id="resultSubtitle" styleClass="selected-hint"/></VBox>
+                <VBox fx:id="roundRows" spacing="2" maxWidth="780" styleClass="setup-card"/>
+                <HBox spacing="16" maxWidth="780">
+                    <VBox fx:id="roomRanking" spacing="10" HBox.hgrow="ALWAYS" styleClass="content-card"><Label text="本房间积分" styleClass="section-title"/><Label text="仅统计当前房间" styleClass="section-subtitle"/></VBox>
+                    <VBox fx:id="friendRanking" spacing="10" HBox.hgrow="ALWAYS" styleClass="content-card"><Label text="好友累计积分" styleClass="section-title"/><Label text="跨房间长期保留" styleClass="section-subtitle"/></VBox>
+                </HBox>
+                <HBox alignment="CENTER" spacing="12"><Button text="返回首页" onAction="#returnHome" styleClass="secondary-button"/><Button fx:id="nextRoundButton" onAction="#nextRound" styleClass="primary-button"/></HBox>
+                <Label text="本局分数已计入房间排名与好友累计积分；下一阶段将由服务端统一确认并广播结算。" styleClass="privacy-tip" wrapText="true"/>
+            </VBox>
+        </center>
+    </BorderPane>
 </StackPane>

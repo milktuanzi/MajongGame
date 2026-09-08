@@ -13,16 +13,17 @@
                 <VBox alignment="CENTER" spacing="5"><Label text="房间码" styleClass="section-subtitle"/><Label fx:id="roomCodeLabel" styleClass="room-code-large"/><Button text="复制并邀请好友" onAction="#copyRoomCode" styleClass="secondary-button"/><Label fx:id="settingsLabel" styleClass="selected-hint"/></VBox>
                 <GridPane hgap="16" maxWidth="930">
                     <columnConstraints><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/></columnConstraints>
-                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-ready" GridPane.columnIndex="0"><StackPane styleClass="seat-avatar"><Label text="东"/></StackPane><Label fx:id="player1Name" styleClass="seat-name"/><Label text="已连接" styleClass="ready-text"/></VBox>
-                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-ready" GridPane.columnIndex="1"><StackPane styleClass="seat-avatar"><Label text="南"/></StackPane><Label text="山海客" styleClass="seat-name"/><Label text="已准备" styleClass="ready-text"/></VBox>
-                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card" GridPane.columnIndex="2"><StackPane styleClass="seat-avatar"><Label text="西"/></StackPane><Label text="小满" styleClass="seat-name"/><Label text="未准备" styleClass="waiting-text"/></VBox>
-                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-empty" GridPane.columnIndex="3"><StackPane styleClass="seat-avatar"><Label text="＋"/></StackPane><Label text="等待好友加入" styleClass="seat-name"/><Label text="分享房间码" styleClass="waiting-text"/></VBox>
+                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-ready" GridPane.columnIndex="0"><StackPane styleClass="seat-avatar"><Label text="东"/></StackPane><Label fx:id="player1Name" styleClass="seat-name"/><Label fx:id="player1Status" styleClass="ready-text"/></VBox>
+                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-ready" GridPane.columnIndex="1"><StackPane styleClass="seat-avatar"><Label text="南"/></StackPane><Label fx:id="player2Name" styleClass="seat-name"/><Label fx:id="player2Status" styleClass="ready-text"/></VBox>
+                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-ready" GridPane.columnIndex="2"><StackPane styleClass="seat-avatar"><Label text="西"/></StackPane><Label fx:id="player3Name" styleClass="seat-name"/><Label fx:id="player3Status" styleClass="ready-text"/></VBox>
+                    <VBox alignment="CENTER" spacing="10" styleClass="seat-card,seat-ready" GridPane.columnIndex="3"><StackPane styleClass="seat-avatar"><Label text="北"/></StackPane><Label fx:id="player4Name" styleClass="seat-name"/><Label fx:id="player4Status" styleClass="ready-text"/></VBox>
                 </GridPane>
                 <VBox alignment="CENTER" spacing="12" maxWidth="560" styleClass="setup-card">
                     <Label fx:id="roomStatusLabel" text="已有 3/4 位玩家进入，等待最后一位好友…" styleClass="setup-title" wrapText="true"/>
-                    <ProgressBar progress="0.75" maxWidth="Infinity" styleClass="room-progress"/>
+                    <Label fx:id="playerCountLabel" styleClass="section-subtitle"/>
+                    <ProgressBar fx:id="roomProgress" progress="0" maxWidth="Infinity" styleClass="room-progress"/>
                     <HBox alignment="CENTER" spacing="12"><Button fx:id="readyButton" text="准备" onAction="#toggleReady" styleClass="secondary-button"/><Button fx:id="startButton" text="房主开始游戏  ›" onAction="#startGame" styleClass="primary-button"/></HBox>
-                    <Label text="Demo 中可由房主直接开始；正式联机实现应在玩家到齐并全部准备后启用。" styleClass="privacy-tip" wrapText="true"/>
+                    <Label text="所有玩家到齐且准备完成后，房主即可开始。网络版将由房间服务实时广播状态。" styleClass="privacy-tip" wrapText="true"/>
                 </VBox>
             </VBox>
         </center>

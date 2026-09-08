@@ -40,9 +40,9 @@
                     </VBox>
                     <VBox spacing="10" styleClass="history-card">
                         <HBox><Label text="好友积分榜" styleClass="section-title"/><Region HBox.hgrow="ALWAYS"/><Label text="累计积分" styleClass="section-subtitle"/></HBox>
-                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="1" styleClass="rank-first"/><Label text="山海客" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label text="2,680" styleClass="rank-score"/></HBox>
-                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="2" styleClass="rank-number"/><Label text="清风客（我）" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label text="2,240" styleClass="rank-score"/></HBox>
-                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="3" styleClass="rank-number"/><Label text="小满" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label text="1,860" styleClass="rank-score"/></HBox>
+                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="1" styleClass="rank-first"/><Label fx:id="rank1Name" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank1Score" styleClass="rank-score"/></HBox>
+                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="2" styleClass="rank-number"/><Label fx:id="rank2Name" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank2Score" styleClass="rank-score"/></HBox>
+                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="3" styleClass="rank-number"/><Label fx:id="rank3Name" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank3Score" styleClass="rank-score"/></HBox>
                     </VBox>
                 </VBox>
 

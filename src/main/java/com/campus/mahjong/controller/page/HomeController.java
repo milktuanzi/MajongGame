@@ -3,6 +3,8 @@ package com.campus.mahjong.controller.page;
 import com.campus.mahjong.model.common.MahjongTypes.ModeCode;
 import com.campus.mahjong.controller.navigation.AppNavigator;
 import com.campus.mahjong.model.session.DemoSession;
+import com.campus.mahjong.infrastructure.persistence.LocalDataServices;
+import com.campus.mahjong.model.common.MahjongTypes.PlayerProfile;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -19,6 +21,12 @@ public final class HomeController {
     @FXML private ComboBox<String> scoreCapBox;
     @FXML private Label modeHintLabel;
     @FXML private Label errorLabel;
+    @FXML private Label rank1Name;
+    @FXML private Label rank1Score;
+    @FXML private Label rank2Name;
+    @FXML private Label rank2Score;
+    @FXML private Label rank3Name;
+    @FXML private Label rank3Score;
     @FXML private Button sichuan;
     @FXML private Button changsha;
     @FXML private Button northern;
@@ -41,6 +49,7 @@ public final class HomeController {
         roundsBox.setValue("8 轮");
         multiplierBox.setValue("2 倍");
         scoreCapBox.setValue("128 分");
+        refreshLeaderboard();
     }
 
     @FXML
@@ -56,9 +65,9 @@ public final class HomeController {
     @FXML
     private void createRoom() {
         if (!validNickname()) return;
-        DemoSession.owner = true;
-        DemoSession.roomCode = "836204";
-        saveSettings();
+        savePlayer();
+        DemoSession.createRoom(nicknameField.getText().trim(), selectedMode,
+                roundsBox.getValue(), multiplierBox.getValue(), scoreCapBox.getValue());
         AppNavigator.waitingRoom();
     }
 
@@ -70,9 +79,8 @@ public final class HomeController {
             errorLabel.setText("请输入房主提供的 6 位房间码");
             return;
         }
-        DemoSession.owner = false;
-        DemoSession.roomCode = code;
-        DemoSession.nickname = nicknameField.getText().trim();
+        savePlayer();
+        DemoSession.joinRoom(nicknameField.getText().trim(), code);
         AppNavigator.waitingRoom();
     }
 
@@ -86,11 +94,30 @@ public final class HomeController {
         return true;
     }
 
-    private void saveSettings() {
-        DemoSession.nickname = nicknameField.getText().trim();
-        DemoSession.mode = selectedMode;
-        DemoSession.rounds = roundsBox.getValue();
-        DemoSession.multiplier = multiplierBox.getValue();
-        DemoSession.scoreCap = scoreCapBox.getValue();
+    private void refreshLeaderboard() {
+        var stored = LocalDataServices.games().leaderboard(3);
+        Label[] names = {rank1Name, rank2Name, rank3Name};
+        Label[] scores = {rank1Score, rank2Score, rank3Score};
+        if (!stored.isEmpty()) {
+            for (int index = 0; index < names.length; index++) {
+                if (index < stored.size()) {
+                    var row = stored.get(index);
+                    names[index].setText(row.nickname() + (row.nickname().equals(DemoSession.nickname) ? "（我）" : ""));
+                    scores[index].setText(String.format("%,d", row.totalScore()));
+                } else { names[index].setText("等待新玩家"); scores[index].setText("0"); }
+            }
+            return;
+        }
+        var fallback = DemoSession.friendLeaderboard();
+        for (int index = 0; index < names.length && index < fallback.size(); index++) {
+            var row = fallback.get(index);
+            names[index].setText(row.name() + (row.name().equals(DemoSession.nickname) ? "（我）" : ""));
+            scores[index].setText(String.format("%,d", row.score()));
+        }
+    }
+
+    private void savePlayer() {
+        String name = nicknameField.getText().trim();
+        LocalDataServices.players().save(new PlayerProfile(DemoSession.playerId(name), name, "", 0, 1));
     }
 }

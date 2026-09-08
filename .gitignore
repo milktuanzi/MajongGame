@@ -1,4 +1,6 @@
 target/
 .m2/
 .idea/
+data/*.db
+data/*.db-*
 *.iml
