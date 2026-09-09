@@ -35,6 +35,7 @@
                     </HBox>
                     <HBox alignment="CENTER" spacing="10">
                         <Button fx:id="passButton" text="过" onAction="#passAction" styleClass="action-button"/>
+                        <Button fx:id="chiButton" text="吃" onAction="#chiAction" styleClass="action-button"/>
                         <Button fx:id="pengButton" text="碰" onAction="#pengAction" styleClass="action-button"/>
                         <Button fx:id="gangButton" text="杠" onAction="#gangAction" styleClass="action-button"/>
                         <Button fx:id="discardButton" text="打出选中牌" onAction="#discardSelected" disable="true" styleClass="secondary-button"/>

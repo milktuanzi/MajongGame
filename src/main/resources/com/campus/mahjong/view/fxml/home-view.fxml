@@ -23,7 +23,7 @@
                     <VBox spacing="4">
                         <Label text="和熟悉的人，打一场好牌" styleClass="eyebrow"/>
                         <Label text="开一间好友房，等大家入座" styleClass="hero-title" wrapText="true"/>
-                        <Label text="房主创建房间后分享 6 位房间码。好友可在不同电脑上加入、准备并同步进行牌局。" styleClass="hero-description" wrapText="true"/>
+                        <Label text="房主开启电脑热点并创建房间，再把完整邀请地址发给好友。四台电脑连接同一热点即可加入。" styleClass="hero-description" wrapText="true"/>
                     </VBox>
                     <VBox spacing="12" styleClass="content-card">
                         <HBox alignment="CENTER_LEFT">
@@ -57,11 +57,11 @@
                         <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1"><Label text="封顶" styleClass="field-label"/><ComboBox fx:id="scoreCapBox" maxWidth="Infinity" styleClass="form-select"/></VBox>
                         <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1"><Label text="人数" styleClass="field-label"/><Label text="4 人" maxWidth="Infinity" styleClass="static-field"/></VBox>
                     </GridPane>
-                    <Button text="创建好友房   ›" onAction="#createRoom" maxWidth="Infinity" styleClass="primary-button"/>
+                    <Button fx:id="createButton" text="创建好友房   ›" onAction="#createRoom" maxWidth="Infinity" styleClass="primary-button"/>
                     <HBox alignment="CENTER" spacing="9"><Separator HBox.hgrow="ALWAYS"/><Label text="或加入已有房间" styleClass="section-subtitle"/><Separator HBox.hgrow="ALWAYS"/></HBox>
-                    <HBox spacing="9"><TextField fx:id="roomCodeField" promptText="输入 6 位房间码" HBox.hgrow="ALWAYS" styleClass="room-code-field"/><Button text="加入房间" onAction="#joinRoom" styleClass="secondary-button"/></HBox>
+                    <HBox spacing="9"><TextField fx:id="roomCodeField" promptText="房主IP:端口#房间码" HBox.hgrow="ALWAYS" styleClass="room-code-field"/><Button fx:id="joinButton" text="加入房间" onAction="#joinRoom" styleClass="secondary-button"/></HBox>
                     <Label fx:id="errorLabel" styleClass="error-label"/>
-                    <Label text="需要连接房主或游戏服务器；断线后可凭会话令牌重新进入原房间。" styleClass="privacy-tip" wrapText="true"/>
+                    <Label text="示例：192.168.137.1:19090#836204。首次连接时请允许游戏通过系统防火墙。" styleClass="privacy-tip" wrapText="true"/>
                 </VBox>
             </HBox>
         </center>

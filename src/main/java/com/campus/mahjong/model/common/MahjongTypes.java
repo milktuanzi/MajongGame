@@ -76,23 +76,29 @@ public final class MahjongTypes {
 
     public record RoomSnapshot(RoomId roomId, RoomKind kind, ModeCode mode,
                                RoomStatus status, List<RoomPlayer> players,
-                               int requiredPlayers, Optional<FriendRoomSettings> settings) {
+                               int requiredPlayers, Optional<FriendRoomSettings> settings,
+                               long revision) {
         public RoomSnapshot {
             Objects.requireNonNull(roomId); Objects.requireNonNull(kind); Objects.requireNonNull(mode);
             Objects.requireNonNull(status); players = List.copyOf(players); Objects.requireNonNull(settings);
+            if (revision < 0) throw new IllegalArgumentException("revision");
         }
     }
 
-    public record RoomPlayer(PlayerProfile profile, Seat seat, boolean owner, boolean ready) {}
+    public record RoomPlayer(PlayerProfile profile, Seat seat, boolean owner, boolean ready,
+                             boolean connected) {}
     public record Tile(String code) { public Tile { requireText(code, "tile code"); } }
 
     public record GameSnapshot(GameId gameId, RoomId roomId, GameStatus status,
                                int currentRound, Seat dealer, Seat currentTurn,
                                List<PlayerPublicState> players, List<Tile> ownHand,
-                               List<Tile> wallPreview, long revision) {
+                               Optional<Tile> drawnTile, List<ActionOption> availableActions,
+                               int wallRemaining, long revision) {
         public GameSnapshot {
             players = List.copyOf(players); ownHand = List.copyOf(ownHand);
-            wallPreview = List.copyOf(wallPreview);
+            Objects.requireNonNull(drawnTile);
+            availableActions = List.copyOf(availableActions);
+            if (wallRemaining < 0 || revision < 0) throw new IllegalArgumentException("invalid game snapshot");
         }
     }
 

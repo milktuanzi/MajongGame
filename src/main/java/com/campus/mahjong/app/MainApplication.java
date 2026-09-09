@@ -2,6 +2,7 @@ package com.campus.mahjong.app;
 
 import com.campus.mahjong.controller.navigation.AppNavigator;
 import com.campus.mahjong.infrastructure.persistence.LocalDataServices;
+import com.campus.mahjong.infrastructure.network.client.LanSession;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
@@ -16,6 +17,11 @@ public final class MainApplication extends Application {
         stage.setMinWidth(1024);
         stage.setMinHeight(680);
         AppNavigator.start(stage);
+    }
+
+    @Override
+    public void stop() {
+        LanSession.closeCurrent();
     }
 
     public static void main(String[] args) {
