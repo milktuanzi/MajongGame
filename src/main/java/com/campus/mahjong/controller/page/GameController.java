@@ -66,6 +66,8 @@ public final class GameController {
     private LanSession lanSession;
     private GameSnapshot networkGame;
     private AutoCloseable gameSubscription;
+    private AutoCloseable settlementSubscription;
+    private boolean disposed;
 
     @FXML
     private void initialize() {
@@ -89,12 +91,18 @@ public final class GameController {
         renderPlayerPositions();
         renderTable(true);
         gameSubscription = session.observeGame(snapshot -> runOnFx(() -> {
+            if (disposed) return;
             boolean drewNewTile = networkGame == null || snapshot.revision() != networkGame.revision();
             networkGame = snapshot;
             clearSelection();
             updateNetworkLabels();
             renderPlayerPositions();
             renderTable(drewNewTile);
+        }));
+        settlementSubscription = session.observeSettlement(result -> Platform.runLater(() -> {
+            if (disposed || !result.gameId().equals(networkGame.gameId())) return;
+            closeGameSubscription();
+            AppNavigator.settlement();
         }));
     }
 
@@ -106,7 +114,7 @@ public final class GameController {
         scoreLabel.setText("本房积分 " + signed(score));
         EnumSet<PlayerActionType> actions = currentActions();
         if (networkGame.status() == GameStatus.SETTLING) {
-            actionTip.setText("本局已经结束；联机结算页将在下一阶段接入");
+            actionTip.setText("本局已经结束，正在接收结算…");
         } else if (actions.contains(PlayerActionType.DISCARD)) {
             actionTip.setText("轮到你出牌；操作将提交给房主服务器校验");
         } else if (actions.contains(PlayerActionType.PASS)) {
@@ -217,6 +225,7 @@ public final class GameController {
         discardButton.setDisable(true);
         actionTip.setText("正在等待房主服务器确认…");
         lanSession.perform(action, tiles).whenComplete((result, error) -> runOnFx(() -> {
+            if (disposed) return;
             handPane.setMouseTransparent(false);
             if (error != null) {
                 actionTip.setText(rootMessage(error));
@@ -438,6 +447,11 @@ public final class GameController {
     }
 
     private void closeGameSubscription() {
+        disposed = true;
+        if (settlementSubscription != null) {
+            try { settlementSubscription.close(); } catch (Exception ignored) {}
+            settlementSubscription = null;
+        }
         if (gameSubscription == null) return;
         try { gameSubscription.close(); } catch (Exception ignored) {}
         gameSubscription = null;

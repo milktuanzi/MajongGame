@@ -37,6 +37,7 @@ final class RoomManager {
                 case JOIN_ROOM -> join(connection, envelope);
                 case SET_READY -> roomFor(connection, envelope).setReady(connection, envelope);
                 case START_GAME -> roomFor(connection, envelope).start(connection, envelope);
+                case NEXT_ROUND -> roomFor(connection, envelope).nextRound(connection, envelope);
                 case PLAYER_ACTION -> roomFor(connection, envelope).perform(connection, envelope);
                 case LEAVE_ROOM -> roomFor(connection, envelope).leave(connection, envelope);
                 case PING -> send(connection, MessageType.PONG, "", "", JsonMessageCodec.tree("pong"));
@@ -113,6 +114,9 @@ final class RoomManager {
         private RoomStatus status = RoomStatus.WAITING;
         private GameId gameId;
         private long revision;
+        private int roundNumber = 1;
+        private Settlement settlement;
+        private final Map<PlayerId, Long> totals = new java.util.HashMap<>();
 
         Room(RoomId id, String inviteCode, FriendRoomSettings settings, PlayerProfile owner) {
             this.id = id;
@@ -163,7 +167,7 @@ final class RoomManager {
             if (!member.profile.id().equals(ownerId)) throw new SecurityException("只有房主可以开始游戏");
             if (members.size() != 4 || members.values().stream().anyMatch(item -> !item.ready || !item.connected()))
                 throw new IllegalStateException("必须四位玩家全部在线并准备");
-            gameId = games.create(snapshot(), secureRandom.nextLong(), 1);
+            gameId = games.create(snapshot(), secureRandom.nextLong(), roundNumber);
             status = RoomStatus.PLAYING;
             revision++;
             reply(connection, envelope, accepted("游戏开始", member.reconnectToken,
@@ -176,6 +180,7 @@ final class RoomManager {
             if (status != RoomStatus.PLAYING || gameId == null) throw new IllegalStateException("牌局尚未开始");
             Member member = requireMember(connection);
             Payloads.PlayerAction payload = JsonMessageCodec.value(envelope.payload(), Payloads.PlayerAction.class);
+            if (!gameId.equals(payload.gameId())) throw new IllegalStateException("该操作属于上一局");
             ActionRequest request = new ActionRequest(gameId, member.profile.id(), payload.type(),
                     payload.tiles(), envelope.expectedRevision());
             ActionResult result = games.perform(request).toCompletableFuture().join();
@@ -186,6 +191,40 @@ final class RoomManager {
             }
             reply(connection, envelope, accepted(result.message(), member.reconnectToken,
                     inviteCode, gameId.value(), snapshot()));
+            broadcastGame();
+            if (result.snapshot().status() == GameStatus.SETTLING && settlement == null) {
+                Settlement raw = games.latestSettlement(gameId).toCompletableFuture().join();
+                List<ScoreChange> changes = raw.changes().stream().map(change -> {
+                    long before = totals.getOrDefault(change.playerId(), 0L);
+                    long after = before + change.delta();
+                    totals.put(change.playerId(), after);
+                    return new ScoreChange(change.playerId(), before, change.delta(), after, change.scoringItems());
+                }).toList();
+                settlement = new Settlement(gameId, roundNumber, changes, raw.winner(), raw.reason());
+                status = RoomStatus.FINISHED;
+                revision++;
+                broadcastRoom();
+                MessageEnvelope event = push(MessageType.ROUND_SETTLED, id.value(), "", revision, settlement);
+                connectedMembers().forEach(player -> player.connection.send(event));
+            }
+        }
+
+        synchronized void nextRound(ClientConnection connection, MessageEnvelope envelope) {
+            Member member = requireMember(connection);
+            if (!member.owner) throw new SecurityException("只有房主可以开始下一轮");
+            GameId previous = JsonMessageCodec.value(envelope.payload(), GameId.class);
+            if (status != RoomStatus.FINISHED || settlement == null || !gameId.equals(previous))
+                throw new IllegalStateException("本局尚未结算或请求已过期");
+            if (roundNumber >= settings.rounds()) throw new IllegalStateException("本场全部轮次已完成");
+            if (members.size() != 4 || members.values().stream().anyMatch(player -> !player.connected()))
+                throw new IllegalStateException("必须四位玩家全部在线");
+            roundNumber++;
+            gameId = games.create(snapshot(), secureRandom.nextLong(), roundNumber);
+            settlement = null;
+            status = RoomStatus.PLAYING;
+            revision++;
+            reply(connection, envelope, accepted("下一轮开始", member.reconnectToken, inviteCode, gameId.value(), snapshot()));
+            broadcastRoom();
             broadcastGame();
         }
 
@@ -244,6 +283,14 @@ final class RoomManager {
 
         synchronized void sendGameSnapshot(Member member) {
             GameSnapshot snapshot = games.snapshot(gameId, member.profile.id()).toCompletableFuture().join();
+            List<PlayerPublicState> players = snapshot.players().stream().map(player ->
+                    new PlayerPublicState(player.playerId(), player.seat(), player.handTileCount(),
+                            player.discards(), player.exposedGroups(), totals.getOrDefault(player.playerId(), 0L),
+                            members.get(player.seat()).connected())).toList();
+            snapshot = new GameSnapshot(snapshot.gameId(), snapshot.roomId(), snapshot.status(),
+                    snapshot.currentRound(), snapshot.dealer(), snapshot.currentTurn(), players,
+                    snapshot.ownHand(), snapshot.drawnTile(), snapshot.availableActions(),
+                    snapshot.wallRemaining(), snapshot.revision());
             sendGame(member.connection, snapshot);
         }
 

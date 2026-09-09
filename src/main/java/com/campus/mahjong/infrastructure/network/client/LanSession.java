@@ -36,6 +36,22 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
     private volatile FriendRoomAccess access;
     private volatile RoomSnapshot room;
     private volatile GameSnapshot game;
+    private volatile Settlement settlement;
+    private final CopyOnWriteArrayList<Consumer<Settlement>> settlementListeners = new CopyOnWriteArrayList<>();
+
+    public Optional<Settlement> currentSettlement() { return Optional.ofNullable(settlement); }
+
+    public AutoCloseable observeSettlement(Consumer<Settlement> listener) {
+        settlementListeners.add(listener);
+        if (settlement != null) listener.accept(settlement);
+        return () -> settlementListeners.remove(listener);
+    }
+
+    public CompletionStage<GameId> nextRound() {
+        return response(client.request(MessageType.NEXT_ROUND, requireRoom().roomId().value(),
+                localPlayer.id().value(), requireRoom().revision(), requireGame().gameId()))
+                .thenApply(result -> new GameId(result.gameId()));
+    }
 
     private LanSession(PlayerProfile localPlayer, boolean owner, String serverAddress,
                        GameNetworkClient client, GameServer ownedServer) {
@@ -206,7 +222,7 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
         GameSnapshot currentGame = requireGame();
         if (!currentGame.gameId().equals(request.gameId()))
             return CompletableFuture.failedFuture(new IllegalArgumentException("不是当前牌局"));
-        Payloads.PlayerAction payload = new Payloads.PlayerAction(request.type(), request.tiles());
+        Payloads.PlayerAction payload = new Payloads.PlayerAction(request.gameId(), request.type(), request.tiles());
         return client.request(MessageType.PLAYER_ACTION, requireRoom().roomId().value(),
                         localPlayer.id().value(), request.expectedRevision(), payload)
                 .thenApply(envelope -> JsonMessageCodec.value(envelope.payload(), Payloads.Response.class))
@@ -220,7 +236,10 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
 
     @Override
     public CompletionStage<Settlement> latestSettlement(GameId gameId) {
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("联机结算将在下一阶段实现"));
+        Settlement latest = settlement;
+        return latest != null && latest.gameId().equals(gameId)
+                ? CompletableFuture.completedFuture(latest)
+                : CompletableFuture.failedFuture(new IllegalStateException("该局尚未收到结算"));
     }
 
     @Override
@@ -234,7 +253,12 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
             case ROOM_SNAPSHOT -> updateRoom(JsonMessageCodec.value(envelope.payload(), RoomSnapshot.class));
             case GAME_SNAPSHOT -> {
                 game = JsonMessageCodec.value(envelope.payload(), GameSnapshot.class);
+                if (settlement != null && !settlement.gameId().equals(game.gameId())) settlement = null;
                 gameListeners.forEach(listener -> listener.accept(game));
+            }
+            case ROUND_SETTLED -> {
+                settlement = JsonMessageCodec.value(envelope.payload(), Settlement.class);
+                settlementListeners.forEach(listener -> listener.accept(settlement));
             }
             default -> { }
         }

@@ -1,6 +1,9 @@
 package com.campus.mahjong.controller.page;
 
 import com.campus.mahjong.controller.navigation.AppNavigator;
+import com.campus.mahjong.infrastructure.network.client.LanSession;
+import com.campus.mahjong.model.common.MahjongTypes.*;
+import javafx.application.Platform;
 import com.campus.mahjong.model.session.DemoSession;
 import com.campus.mahjong.infrastructure.persistence.LocalDataServices;
 import com.campus.mahjong.model.repository.GameRecordRepository.PlayerRoundScore;
@@ -25,9 +28,17 @@ public final class SettlementController {
     @FXML private VBox roomRanking;
     @FXML private VBox friendRanking;
     @FXML private Button nextRoundButton;
+    private LanSession session;
+    private Settlement networkResult;
+    private AutoCloseable gameSubscription;
+    private boolean disposed;
 
     @FXML
     private void initialize() {
+        if (LanSession.current().isPresent()) {
+            initializeNetwork();
+            return;
+        }
         var result = DemoSession.lastResult();
         if (result == null) throw new IllegalStateException("缺少本局结算数据");
         persist(result);
@@ -42,6 +53,19 @@ public final class SettlementController {
     }
 
     @FXML private void nextRound() {
+        if (session != null) {
+            int total = session.currentRoom().orElseThrow().settings().orElseThrow().rounds();
+            if (networkResult.round() >= total) { returnHome(); return; }
+            nextRoundButton.setDisable(true);
+            session.nextRound().whenComplete((id, error) -> Platform.runLater(() -> {
+                if (disposed) return;
+                if (error != null) {
+                    resultSubtitle.setText("无法开始下一轮：" + error.getMessage());
+                    nextRoundButton.setDisable(!session.owner());
+                }
+            }));
+            return;
+        }
         if (DemoSession.hasNextRound()) {
             DemoSession.nextRound();
             AppNavigator.game();
@@ -50,7 +74,56 @@ public final class SettlementController {
         }
     }
 
-    @FXML private void returnHome() { AppNavigator.home(); }
+    @FXML private void returnHome() {
+        dispose();
+        if (session != null) LanSession.closeCurrent();
+        AppNavigator.home();
+    }
+
+    private void initializeNetwork() {
+        session = LanSession.current().orElseThrow();
+        networkResult = session.currentSettlement().orElseThrow();
+        RoomSnapshot room = session.currentRoom().orElseThrow();
+        int total = room.settings().orElseThrow().rounds();
+        String winner = networkResult.winner().flatMap(seat -> room.players().stream()
+                .filter(player -> player.seat() == seat).findFirst())
+                .map(player -> player.profile().nickname()).orElse("流局");
+        var deltas = new LinkedHashMap<String, Long>();
+        networkResult.changes().forEach(change -> deltas.put(playerName(change.playerId()), change.delta()));
+        renderRoundRows(new DemoSession.RoundResult(networkResult.round(), winner, networkResult.reason(), deltas));
+        var ranking = networkResult.changes().stream()
+                .sorted(Comparator.comparingLong(ScoreChange::after).reversed())
+                .map(change -> new DemoSession.ScoreRow(playerName(change.playerId()), change.after())).toList();
+        renderRanking(roomRanking, ranking, true);
+        // 联机只显示本房权威排名，避免把某台机器的本地榜当成全局榜。
+        friendRanking.setVisible(false);
+        friendRanking.setManaged(false);
+        resultTitle.setText(networkResult.round() >= total ? "本场对局已完成" : "本局结算");
+        resultSubtitle.setText(networkResult.reason() + " · " + winner);
+        progressLabel.setText("房间 " + session.roomCode() + " · 已完成 " + networkResult.round() + "/" + total + " 轮");
+        boolean finished = networkResult.round() >= total;
+        nextRoundButton.setText(finished ? "完成牌局" : session.owner() ? "开始下一轮" : "等待房主开始下一轮");
+        nextRoundButton.setDisable(!finished && !session.owner());
+        gameSubscription = session.observeGame(snapshot -> Platform.runLater(() -> {
+            if (disposed || snapshot.gameId().equals(networkResult.gameId())) return;
+            dispose();
+            AppNavigator.game();
+        }));
+    }
+
+    private String playerName(PlayerId id) {
+        return session.currentRoom().orElseThrow().players().stream()
+                .filter(player -> player.profile().id().equals(id))
+                .map(player -> player.profile().nickname()).findFirst().orElse(id.value());
+    }
+
+    private void dispose() {
+        disposed = true;
+        if (gameSubscription != null) {
+            try { gameSubscription.close(); } catch (Exception ignored) {}
+            gameSubscription = null;
+        }
+    }
 
     private void renderRoundRows(DemoSession.RoundResult result) {
         roundRows.getChildren().clear();

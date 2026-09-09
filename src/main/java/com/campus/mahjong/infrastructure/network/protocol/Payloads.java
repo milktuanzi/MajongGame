@@ -11,8 +11,11 @@ public final class Payloads {
     public record CreateRoom(PlayerProfile player, FriendRoomSettings settings) {}
     public record JoinRoom(PlayerProfile player, String inviteCode, String password) {}
     public record Ready(boolean ready) {}
-    public record PlayerAction(PlayerActionType type, List<Tile> tiles) {
-        public PlayerAction { tiles = List.copyOf(tiles); }
+    public record PlayerAction(GameId gameId, PlayerActionType type, List<Tile> tiles) {
+        public PlayerAction {
+            java.util.Objects.requireNonNull(gameId, "gameId");
+            tiles = List.copyOf(tiles);
+        }
     }
     public record Response(boolean accepted, String message, String reconnectToken,
                            String inviteCode, String gameId, RoomSnapshot room) {

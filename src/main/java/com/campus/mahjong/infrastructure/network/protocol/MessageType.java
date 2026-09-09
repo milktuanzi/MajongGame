@@ -6,6 +6,8 @@ public enum MessageType {
     JOIN_ROOM,
     SET_READY,
     START_GAME,
+    NEXT_ROUND,
+    ROUND_SETTLED,
     LEAVE_ROOM,
     PLAYER_ACTION,
     ROOM_SNAPSHOT,

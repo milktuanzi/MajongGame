@@ -16,8 +16,66 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LanConnectivityTest {
+    @Test
+    void settlesTwoRoundsAndRejectsUnauthorizedOrExtraRounds() throws Exception {
+        var settings = new FriendRoomSettings(ModeCode.NORTHERN, 2, Optional.of(128), 2, false, "");
+        List<LanSession> clients = new ArrayList<>();
+        LanSession host = await(LanSession.host(player("房主"), settings, 0, "127.0.0.1"));
+        clients.add(host);
+        try {
+            for (String name : List.of("南", "西", "北")) {
+                LanSession guest = await(LanSession.join(player(name), host.invitation()));
+                clients.add(guest);
+                await(guest.setReady(guest.currentRoom().orElseThrow().roomId(), guest.localPlayer().id(), true));
+            }
+            await(host.start(host.currentRoom().orElseThrow().roomId(), host.localPlayer().id()));
+            waitUntil(() -> clients.stream().allMatch(client -> client.currentGame().isPresent()));
+            for (int round = 1; round <= 2; round++) {
+                playUntilDraw(clients);
+                waitUntil(() -> clients.stream().allMatch(client -> client.currentSettlement().isPresent()));
+                Settlement result = host.currentSettlement().orElseThrow();
+                assertEquals(round, result.round());
+                assertTrue(result.winner().isEmpty());
+                assertEquals(0, result.changes().stream().mapToLong(ScoreChange::delta).sum());
+                for (LanSession client : clients) assertEquals(result, client.currentSettlement().orElseThrow());
+                assertThrows(Exception.class, () -> await(clients.get(1).nextRound()));
+                if (round == 1) {
+                    GameId next = await(host.nextRound());
+                    waitUntil(() -> clients.stream().allMatch(client ->
+                            client.currentGame().orElseThrow().gameId().equals(next)));
+                    assertTrue(clients.stream().allMatch(client -> client.currentSettlement().isEmpty()));
+                    assertThrows(Exception.class, () -> await(host.nextRound()));
+                } else {
+                    assertThrows(Exception.class, () -> await(host.nextRound()));
+                }
+            }
+        } finally {
+            clients.reversed().forEach(LanSession::close);
+        }
+    }
+
+    private void playUntilDraw(List<LanSession> clients) throws Exception {
+        for (int turn = 0; turn < 150; turn++) {
+            GameSnapshot state = clients.get(0).currentGame().orElseThrow();
+            if (state.status() == GameStatus.SETTLING) return;
+            LanSession actor = clients.stream().filter(client -> localSeat(client) == state.currentTurn()).findFirst().orElseThrow();
+            Tile tile = actor.currentGame().orElseThrow().drawnTile().orElseThrow();
+            assertTrue(await(actor.perform(PlayerActionType.DISCARD, List.of(tile))).accepted());
+            waitUntil(() -> clients.stream().allMatch(client ->
+                    client.currentGame().orElseThrow().revision() > state.revision()));
+            long claimRevision = clients.get(0).currentGame().orElseThrow().revision();
+            for (LanSession client : clients) {
+                if (client != actor) assertTrue(await(client.perform(PlayerActionType.PASS, List.of())).accepted());
+            }
+            waitUntil(() -> clients.stream().allMatch(client ->
+                    client.currentGame().orElseThrow().revision() > claimRevision));
+        }
+        throw new AssertionError("牌墙耗尽后仍未结算");
+    }
+
     @Test
     void fourClientsJoinReadyStartAndShareAnAuthoritativeRound() throws Exception {
         FriendRoomSettings settings = new FriendRoomSettings(ModeCode.NORTHERN,
