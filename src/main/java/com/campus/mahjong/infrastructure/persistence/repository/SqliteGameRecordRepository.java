@@ -20,6 +20,12 @@ public final class SqliteGameRecordRepository implements GameRecordRepository {
 
     @Override public void recordRound(String recordId, String roomCode, ModeCode mode, int round,
                                       Map<PlayerId, PlayerRoundScore> scores, Optional<PlayerId> winner) {
+        recordRound(recordId, roomCode, mode, round, scores, winner.map(java.util.Set::of).orElse(java.util.Set.of()));
+    }
+
+    @Override public void recordRound(String recordId, String roomCode, ModeCode mode, int round,
+                                      Map<PlayerId, PlayerRoundScore> scores, java.util.Set<PlayerId> winners) {
+        Optional<PlayerId> winner = winners.size() == 1 ? winners.stream().findFirst() : Optional.empty();
         try (Connection connection = database.connect()) {
             connection.setAutoCommit(false);
             try {
@@ -43,7 +49,7 @@ public final class SqliteGameRecordRepository implements GameRecordRepository {
                             ON CONFLICT(player_id) DO UPDATE SET total_score=total_score+excluded.total_score,
                             games=games+1, wins=wins+excluded.wins, last_played_at=CURRENT_TIMESTAMP""")) {
                         ranking.setString(1, entry.getKey().value()); ranking.setLong(2, entry.getValue().delta());
-                        ranking.setInt(3, winner.filter(entry.getKey()::equals).isPresent() ? 1 : 0); ranking.executeUpdate();
+                        ranking.setInt(3, winners.contains(entry.getKey()) ? 1 : 0); ranking.executeUpdate();
                     }
                 }
                 connection.commit();
@@ -52,6 +58,23 @@ public final class SqliteGameRecordRepository implements GameRecordRepository {
                 throw exception;
             } finally { connection.setAutoCommit(true); }
         } catch (SQLException exception) { throw new IllegalStateException("写入对局结算失败", exception); }
+    }
+
+    @Override public void recordLedger(String matchId, List<com.campus.mahjong.model.game.ScoreEntry> entries,
+                                       Map<com.campus.mahjong.model.common.MahjongTypes.Seat, String> names) {
+        try (var connection = database.connect()) {
+            connection.setAutoCommit(false);
+            try (var statement = connection.prepareStatement("INSERT OR IGNORE INTO match_ledger VALUES(?,?,?,?,?,?,?,?)")) {
+                for (var entry : entries) {
+                    statement.setString(1, matchId); statement.setInt(2, entry.sequence()); statement.setInt(3, entry.round());
+                    statement.setString(4, entry.payer().map(names::get).orElse(null));
+                    statement.setString(5, entry.payee().map(names::get).orElse(null));
+                    statement.setLong(6, entry.amount()); statement.setString(7, entry.reason());
+                    statement.setString(8, String.join(" · ", entry.patterns())); statement.addBatch();
+                }
+                statement.executeBatch(); connection.commit();
+            } catch (SQLException error) { connection.rollback(); throw error; }
+        } catch (SQLException error) { throw new IllegalStateException("保存积分流水失败", error); }
     }
 
     @Override public List<FriendScoreEntry> leaderboard(int limit) {

@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.node.NullNode;
 public record MessageEnvelope(int protocolVersion, String requestId, MessageType messageType,
                               String roomId, String playerId, long expectedRevision,
                               JsonNode payload) {
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 3;
 
     public MessageEnvelope {
         if (protocolVersion <= 0) throw new IllegalArgumentException("protocolVersion");

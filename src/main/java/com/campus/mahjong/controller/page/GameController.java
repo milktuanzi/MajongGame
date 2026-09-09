@@ -16,6 +16,10 @@ import com.campus.mahjong.model.session.DemoSession;
 import com.campus.mahjong.view.component.MahjongTileView;
 import com.campus.mahjong.view.component.TableSeatLayout;
 import javafx.animation.FadeTransition;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.css.PseudoClass;
+import javafx.scene.Group;
 import javafx.animation.ParallelTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.ScaleTransition;
@@ -24,10 +28,14 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.animation.Interpolator;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
@@ -48,17 +56,40 @@ public final class GameController {
     @FXML private Label leftPlayerLabel;
     @FXML private Label rightPlayerLabel;
     @FXML private HBox handPane;
-    @FXML private HBox meldPane;
+    @FXML private StackPane tableViewport;
+    @FXML private Pane tableBoard;
+    @FXML private HBox bottomMeldPane;
+    @FXML private HBox rightMeldPane;
+    @FXML private HBox topMeldPane;
+    @FXML private HBox leftMeldPane;
     @FXML private FlowPane bottomDiscardPane;
     @FXML private FlowPane rightDiscardPane;
     @FXML private FlowPane leftDiscardPane;
     @FXML private FlowPane topDiscardPane;
     @FXML private Button discardButton;
     @FXML private Button passButton;
+    @FXML private Button missingWanButton;
+    @FXML private Button missingPinButton;
+    @FXML private Button missingSouButton;
     @FXML private Button chiButton;
     @FXML private Button pengButton;
     @FXML private Button gangButton;
     @FXML private Button huButton;
+    @FXML private Label turnTimerLabel;
+    @FXML private Label turnPhaseLabel;
+    @FXML private Label bottomTurnIndicator;
+    @FXML private Label rightTurnIndicator;
+    @FXML private Label topTurnIndicator;
+    @FXML private Label leftTurnIndicator;
+    private final Timeline turnClock = new Timeline(new KeyFrame(Duration.seconds(1), event -> updateTurnClock()));
+    @FXML private CheckBox reducedMotion;
+    @FXML private Label actionFeedback;
+    private javafx.animation.SequentialTransition feedbackAnimation;
+    private java.util.Set<Seat> previousWinners = java.util.Set.of();
+    private final java.util.Map<HBox, String> meldSignatures = new java.util.HashMap<>();
+    private String lastDrawKey = "";
+    private final java.util.Map<FlowPane, Integer> discardCounts = new java.util.HashMap<>();
+    private boolean settlementShown;
     private String selectedTile;
     private boolean selectedIsDrawn;
     private MahjongTileView selectedView;
@@ -69,6 +100,14 @@ public final class GameController {
 
     @FXML
     private void initialize() {
+        tableViewport.widthProperty().addListener((obs, oldValue, value) -> fitTable());
+        tableViewport.heightProperty().addListener((obs, oldValue, value) -> fitTable());
+        Platform.runLater(this::fitTable);
+        turnClock.setCycleCount(Timeline.INDEFINITE);
+        tableViewport.sceneProperty().addListener((obs, previous, scene) -> {
+            if (scene == null) turnClock.stop();
+            else turnClock.play();
+        });
         Optional<LanSession> current = LanSession.current();
         if (current.isPresent() && current.get().currentGame().isPresent()) {
             initializeNetworkGame(current.get());
@@ -85,12 +124,14 @@ public final class GameController {
     private void initializeNetworkGame(LanSession session) {
         lanSession = session;
         networkGame = session.currentGame().orElseThrow();
+        if (networkGame.status() == GameStatus.FINISHED) { Platform.runLater(this::showFinalSettlement); return; }
         updateNetworkLabels();
         renderPlayerPositions();
         renderTable(true);
         gameSubscription = session.observeGame(snapshot -> runOnFx(() -> {
             boolean drewNewTile = networkGame == null || snapshot.revision() != networkGame.revision();
             networkGame = snapshot;
+            if (showFinalSettlement()) return;
             clearSelection();
             updateNetworkLabels();
             renderPlayerPositions();
@@ -105,8 +146,10 @@ public final class GameController {
         long score = localPublicState().map(PlayerPublicState::score).orElse(0L);
         scoreLabel.setText("本房积分 " + signed(score));
         EnumSet<PlayerActionType> actions = currentActions();
-        if (networkGame.status() == GameStatus.SETTLING) {
-            actionTip.setText("本局已经结束；联机结算页将在下一阶段接入");
+        if (networkGame.status() == GameStatus.FINISHED) {
+            actionTip.setText("所有轮次已结束");
+        } else if (networkGame.winners().contains(localSeat())) {
+            actionTip.setText("你已胡牌，正在观看其余玩家继续；本轮结束后自动进入下一轮");
         } else if (actions.contains(PlayerActionType.DISCARD)) {
             actionTip.setText("轮到你出牌；操作将提交给房主服务器校验");
         } else if (actions.contains(PlayerActionType.PASS)) {
@@ -124,11 +167,12 @@ public final class GameController {
         }
         discardButton.setDisable(true);
         handPane.setMouseTransparent(true);
-        TranslateTransition move = new TranslateTransition(Duration.millis(180), selectedView);
-        move.setByY(-68);
-        FadeTransition fade = new FadeTransition(Duration.millis(180), selectedView);
+        TranslateTransition move = new TranslateTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), selectedView);
+        move.setByY(reducedMotion.isSelected() ? 0 : -90);
+        move.setInterpolator(Interpolator.EASE_IN);
+        FadeTransition fade = new FadeTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), selectedView);
         fade.setToValue(.1);
-        ScaleTransition scale = new ScaleTransition(Duration.millis(180), selectedView);
+        ScaleTransition scale = new ScaleTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), selectedView);
         scale.setToX(.78); scale.setToY(.78);
         String tile = selectedTile;
         boolean isDrawn = selectedIsDrawn;
@@ -148,6 +192,29 @@ public final class GameController {
             else scheduleSimulationStep();
         });
         transition.play();
+    }
+
+    @FXML private void chooseMissingWan() { chooseMissingSuit(TileType.MAN_1); }
+    @FXML private void chooseMissingPin() { chooseMissingSuit(TileType.PIN_1); }
+    @FXML private void chooseMissingSou() { chooseMissingSuit(TileType.SOU_1); }
+    private void chooseMissingSuit(TileType tile) {
+        if (lanSession != null) {
+            missingWanButton.setDisable(true); missingPinButton.setDisable(true); missingSouButton.setDisable(true);
+            submitNetworkAction(PlayerActionType.DING_QUE, List.of(new Tile(tile.displayName())));
+        } else {
+            try { DemoSession.chooseMissingSuit(tile.suit()); }
+            catch (RuntimeException error) { actionTip.setText(error.getMessage()); }
+            renderTable(false);
+        }
+    }
+
+    private boolean choosingMissingSuit() { return lanSession == null ? DemoSession.choosingMissingSuit() : networkGame.choosingMissingSuit(); }
+    private java.util.Map<Seat, TileType.Suit> missingSuits() { return lanSession == null ? DemoSession.missingSuits() : networkGame.missingSuits(); }
+    private String suitName(TileType.Suit suit) { return switch(suit) { case MAN -> "万"; case PIN -> "筒"; case SOU -> "条"; default -> ""; }; }
+    private boolean canDiscardTile(String name) {
+        return lanSession == null ? DemoSession.discardableTiles().contains(name) : networkGame.availableActions().stream()
+                .filter(action -> action.type() == PlayerActionType.DISCARD).flatMap(action -> action.relatedTiles().stream())
+                .anyMatch(tile -> tile.code().equals(name));
     }
 
     @FXML private void passAction() { applyClaim(PlayerActionType.PASS); }
@@ -176,6 +243,8 @@ public final class GameController {
         actionTip.setText(DemoSession.declareLocalGang(selectedTile));
         clearSelection();
         renderTable(true);
+        if (DemoSession.roundFinished()) AppNavigator.settlement();
+        else scheduleSimulationStep();
     }
 
     @FXML
@@ -186,7 +255,10 @@ public final class GameController {
         }
         try {
             DemoSession.declareLocalWin();
-            AppNavigator.settlement();
+            clearSelection();
+            renderTable(true);
+            if (DemoSession.roundFinished()) AppNavigator.settlement();
+            else scheduleSimulationStep();
         } catch (IllegalStateException error) {
             actionTip.setText(error.getMessage());
             renderActionButtons();
@@ -219,17 +291,30 @@ public final class GameController {
         lanSession.perform(action, tiles).whenComplete((result, error) -> runOnFx(() -> {
             handPane.setMouseTransparent(false);
             if (error != null) {
+                clearSelection();
+                renderTable(false);
                 actionTip.setText(rootMessage(error));
-                renderActionButtons();
                 return;
             }
             actionTip.setText(result.message());
-            if (!result.accepted()) renderActionButtons();
+            if (!result.accepted()) { clearSelection(); renderTable(false); actionTip.setText(result.message()); }
         }));
     }
 
     private void renderTable(boolean animateDraw) {
+        if (lanSession == null) {
+            DemoSession.synchronizeProgress();
+            roundLabel.setText("第 " + DemoSession.currentRound() + " / " + DemoSession.totalRounds() + " 轮");
+            scoreLabel.setText("本房积分 " + signed(DemoSession.roomScores().getOrDefault(DemoSession.nickname, 0L)));
+        }
+        renderPlayerPositions();
+        if (lanSession == null && DemoSession.winners().contains(localSeat()))
+            actionTip.setText("你已胡牌，正在观看其余玩家继续；本轮结束后自动进入下一轮");
         renderMelds();
+        java.util.Set<Seat> winners = lanSession == null ? DemoSession.winners() : networkGame.winners();
+        if (!previousWinners.containsAll(winners)) showActionFeedback("胡");
+        previousWinners = java.util.Set.copyOf(winners);
+        updateTurnClock();
         handPane.getChildren().clear();
         boolean canDiscard = currentActions().contains(PlayerActionType.DISCARD);
         List<String> organizedHand = lanSession == null
@@ -247,9 +332,13 @@ public final class GameController {
             handPane.getChildren().add(gap);
             MahjongTileView drawn = createHandTile(tileName, true, canDiscard);
             handPane.getChildren().add(drawn);
-            if (animateDraw) animateDraw(drawn);
+            String key = (lanSession == null ? DemoSession.currentRound() : networkGame.currentRound()) + ":"
+                    + (lanSession == null ? DemoSession.remainingTiles() : networkGame.wallRemaining()) + ":" + tileName;
+            if (animateDraw && !key.equals(lastDrawKey) && !reducedMotion.isSelected()) animateDraw(drawn);
+            lastDrawKey = key;
         });
 
+        if (drawnTile.isEmpty()) lastDrawKey = "";
         Seat localSeat = localSeat();
         renderSeatDiscards(bottomDiscardPane, localSeat);
         renderSeatDiscards(rightDiscardPane, TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.RIGHT));
@@ -274,6 +363,7 @@ public final class GameController {
                 ? DemoSession.discardsForSeat(seat)
                 : networkGame.players().stream().filter(player -> player.seat() == seat).findFirst()
                 .map(player -> player.discards().stream().map(Tile::code).toList()).orElse(List.of());
+        Integer previousCount = discardCounts.put(pane, discards.size());
         discards.forEach(tileName -> {
             MahjongTileView tile = new MahjongTileView(TileType.fromDisplayName(tileName), true);
             tile.setMouseTransparent(true);
@@ -281,53 +371,140 @@ public final class GameController {
             tile.setScaleX(.78);
             tile.setScaleY(.78);
             pane.getChildren().add(tile);
+            if (!reducedMotion.isSelected() && previousCount != null && discards.size() > previousCount
+                    && pane.getChildren().size() == discards.size()) {
+                ScaleTransition settle = new ScaleTransition(Duration.millis(170), tile);
+                settle.setFromX(.94); settle.setFromY(.94); settle.setToX(.78); settle.setToY(.78);
+                settle.setInterpolator(Interpolator.EASE_OUT); settle.play();
+            }
         });
     }
 
-    private void renderMelds() {
-        meldPane.getChildren().clear();
-        if (lanSession != null) {
-            localPublicState().ifPresent(player -> player.exposedGroups().forEach(group ->
-                    addMeldGroup(group.size() == 4 ? "杠" : group.size() == 3 ? "碰 / 吃" : "副露",
-                            group.stream().map(tile -> TileType.fromDisplayName(tile.code())).toList())));
-            meldPane.setVisible(!meldPane.getChildren().isEmpty());
-            meldPane.setManaged(!meldPane.getChildren().isEmpty());
-            return;
-        }
-        for (Meld meld : DemoSession.localMelds()) {
-            addMeldGroup(meld.type() == PlayerActionType.GANG ? "杠" : "碰", meld.tiles());
-        }
-        meldPane.setVisible(!meldPane.getChildren().isEmpty());
-        meldPane.setManaged(!meldPane.getChildren().isEmpty());
+    private void fitTable() {
+        double scale = Math.min(tableViewport.getWidth() / 1000, tableViewport.getHeight() / 1000);
+        if (scale <= 0) return;
+        tableBoard.setScaleX(scale);
+        tableBoard.setScaleY(scale);
     }
 
-    private void addMeldGroup(String label, List<TileType> tileTypes) {
-        Label kind = new Label(label);
-        kind.getStyleClass().add("meld-kind");
-        HBox tiles = new HBox(2);
-        tiles.setAlignment(javafx.geometry.Pos.CENTER);
+    private void renderMelds() {
+        Seat local = localSeat();
+        renderSeatMelds(bottomMeldPane, local);
+        renderSeatMelds(rightMeldPane, TableSeatLayout.seatAt(local, TableSeatLayout.Position.RIGHT));
+        renderSeatMelds(topMeldPane, TableSeatLayout.seatAt(local, TableSeatLayout.Position.TOP));
+        renderSeatMelds(leftMeldPane, TableSeatLayout.seatAt(local, TableSeatLayout.Position.LEFT));
+    }
+
+    private void renderSeatMelds(HBox pane, Seat seat) {
+        pane.getChildren().clear();
+        if (lanSession != null) {
+            networkGame.players().stream().filter(player -> player.seat() == seat).findFirst()
+                    .ifPresent(player -> player.exposedGroups().forEach(group -> {
+                        List<TileType> tiles = group.stream().map(tile -> TileType.fromDisplayName(tile.code())).toList();
+                        String label = tiles.size() == 4 ? "杠" : tiles.stream().distinct().count() == 1 ? "碰" : "吃";
+                        addMeldGroup(pane, label, tiles);
+                    }));
+        } else {
+            for (Meld meld : DemoSession.meldsForSeat(seat)) {
+                addMeldGroup(pane, switch (meld.type()) {
+                    case GANG -> "杠";
+                    case PENG -> "碰";
+                    default -> "吃";
+                }, meld.tiles());
+            }
+        }
+        String signature = pane.getChildren().stream()
+                .map(node -> ((Group) node).getChildren().getFirst().getAccessibleText())
+                .collect(java.util.stream.Collectors.joining("|"));
+        String previous = meldSignatures.put(pane, signature);
+        if (previous != null && !signature.isEmpty() && !signature.equals(previous)) {
+            String latest = ((Group) pane.getChildren().getLast()).getChildren().getFirst().getAccessibleText();
+            showActionFeedback(latest.substring(0, 1));
+            if (!reducedMotion.isSelected()) {
+                FadeTransition reveal = new FadeTransition(Duration.millis(200), pane);
+                reveal.setFromValue(.35); reveal.setToValue(1); reveal.play();
+            }
+        }
+    }
+
+    private void addMeldGroup(HBox pane, String label, List<TileType> tileTypes) {
+        HBox tiles = new HBox(0);
+        tiles.setAccessibleText(label + "：" + tileTypes.stream().map(TileType::displayName)
+                .collect(java.util.stream.Collectors.joining("、")));
         for (TileType tileType : tileTypes) {
-            MahjongTileView tile = new MahjongTileView(tileType, false);
+            MahjongTileView tile = new MahjongTileView(tileType, true);
             tile.getStyleClass().add("exposed-tile");
-            tile.setMouseTransparent(true);
             tiles.getChildren().add(tile);
         }
-        VBox group = new VBox(2, kind, tiles);
-        group.setAlignment(javafx.geometry.Pos.CENTER);
-        group.getStyleClass().add("meld-group");
-        meldPane.getChildren().add(group);
+        // Group 使用缩放后的边界参加父布局，四组杠牌也可保持单排。
+        tiles.setScaleX(.64);
+        tiles.setScaleY(.64);
+        pane.getChildren().add(new Group(tiles));
+    }
+
+    private void showActionFeedback(String text) {
+        if (feedbackAnimation != null) feedbackAnimation.stop();
+        actionFeedback.setText(text); actionFeedback.setVisible(true);
+        FadeTransition enter = new FadeTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 130), actionFeedback);
+        enter.setFromValue(0); enter.setToValue(1);
+        FadeTransition leave = new FadeTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), actionFeedback);
+        leave.setFromValue(1); leave.setToValue(0);
+        feedbackAnimation = new javafx.animation.SequentialTransition(enter, new PauseTransition(Duration.millis(650)), leave);
+        feedbackAnimation.setOnFinished(event -> actionFeedback.setVisible(false));
+        feedbackAnimation.play();
+    }
+
+    private void updateTurnClock() {
+        boolean wasChoosing = choosingMissingSuit();
+        if (lanSession == null) {
+            DemoSession.synchronizeProgress();
+            if (wasChoosing && !choosingMissingSuit()) { renderTable(false); return; }
+        }
+        boolean finished = lanSession == null ? DemoSession.roundFinished() : networkGame.status() == GameStatus.FINISHED;
+        boolean waiting = lanSession == null ? DemoSession.waitingForClaims() : networkGame.waitingForClaims();
+        long started = lanSession == null ? DemoSession.actionStartedAtMillis() : networkGame.actionStartedAtMillis();
+        Seat current = lanSession == null ? DemoSession.currentTurnSeat() : networkGame.currentTurn();
+        long elapsed = started == 0 || finished ? 0 : Math.max(0, (System.currentTimeMillis() - started) / 1000);
+        turnTimerLabel.setText(finished ? "—" : String.format("%02d:%02d", elapsed / 60, elapsed % 60));
+        turnPhaseLabel.setText(finished ? "本局结束" : waiting ? "等待响应" : "出牌用时");
+        if (choosingMissingSuit()) {
+            long deadline = lanSession == null ? DemoSession.missingSuitDeadline() : networkGame.missingSuitDeadline();
+            turnTimerLabel.setText(String.format("%02d", Math.max(0, (deadline - System.currentTimeMillis() + 999) / 1000)));
+            turnPhaseLabel.setText("定缺倒计时");
+        }
+        Label[] indicators = {bottomTurnIndicator, rightTurnIndicator, topTurnIndicator, leftTurnIndicator};
+        TableSeatLayout.Position[] positions = TableSeatLayout.Position.values();
+        for (int i = 0; i < indicators.length; i++) {
+            boolean active = !choosingMissingSuit() && !finished && !waiting && TableSeatLayout.seatAt(localSeat(), positions[i]) == current;
+            indicators[i].pseudoClassStateChanged(PseudoClass.getPseudoClass("active"), active);
+            indicators[i].setAccessibleText(active ? "当前出牌玩家方向" : "");
+        }
     }
 
     private MahjongTileView createHandTile(String tileName, boolean drawn, boolean canDiscard) {
         MahjongTileView view = new MahjongTileView(TileType.fromDisplayName(tileName), false);
         view.setDrawn(drawn);
-        view.setDisable(!canDiscard);
+        view.setDisable(!canDiscard || !canDiscardTile(tileName));
+        if (TileType.fromDisplayName(tileName).suit() == missingSuits().get(localSeat())) view.getStyleClass().add("missing-suit-tile");
         view.setOnMouseClicked(event -> selectTile(view, tileName, drawn));
         return view;
     }
 
     private void renderActionButtons() {
         EnumSet<PlayerActionType> actions = currentActions();
+        boolean choose = actions.contains(PlayerActionType.DING_QUE);
+        Button[] missingButtons = {missingWanButton, missingPinButton, missingSouButton};
+        TileType.Suit[] suits = {TileType.Suit.MAN, TileType.Suit.PIN, TileType.Suit.SOU};
+        List<String> own = lanSession == null ? DemoSession.hand() : java.util.stream.Stream.concat(networkGame.ownHand().stream(), networkGame.drawnTile().stream()).map(Tile::code).toList();
+        for (int i = 0; i < 3; i++) {
+            TileType.Suit suit = suits[i];
+            long count = own.stream().filter(tile -> TileType.fromDisplayName(tile).suit() == suit).count();
+            missingButtons[i].setText("缺" + suitName(suit) + " · " + count + " 张");
+            show(missingButtons[i], choose); missingButtons[i].setDisable(false);
+        }
+        if (choosingMissingSuit()) actionTip.setText(choose ? "请选择本轮定缺；超时自动选择张数最少的花色" : "已定缺，等待其他玩家确认");
+        else if (actions.contains(PlayerActionType.DISCARD) && missingSuits().containsKey(localSeat()))
+            actionTip.setText("本轮缺" + suitName(missingSuits().get(localSeat())) + "，有缺门牌时必须先打出缺门牌");
         boolean claim = lanSession == null
                 ? DemoSession.isAwaitingLocalClaim() : actions.contains(PlayerActionType.PASS);
         show(passButton, claim);
@@ -345,7 +522,7 @@ public final class GameController {
     }
 
     private void selectTile(MahjongTileView view, String tile, boolean drawn) {
-        if (!currentActions().contains(PlayerActionType.DISCARD)) return;
+        if (!currentActions().contains(PlayerActionType.DISCARD) || !canDiscardTile(tile)) return;
         handPane.getChildren().stream().filter(MahjongTileView.class::isInstance)
                 .map(MahjongTileView.class::cast).filter(item -> item != view)
                 .forEach(item -> returnToBase(item));
@@ -359,13 +536,13 @@ public final class GameController {
         if (localGangTiles().contains(tile)) {
             actionTip.setText("该牌可补杠/暗杠；点击“补 / 暗杠”确认，或继续打出");
         }
-        TranslateTransition lift = new TranslateTransition(Duration.millis(110), view);
-        lift.setToY(-9); lift.play();
+        TranslateTransition lift = new TranslateTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 130), view);
+        lift.setInterpolator(Interpolator.EASE_OUT); lift.setToY(-12); lift.play();
     }
 
     private void returnToBase(MahjongTileView tile) {
         tile.setSelectedState(false);
-        TranslateTransition fall = new TranslateTransition(Duration.millis(140), tile);
+        TranslateTransition fall = new TranslateTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 140), tile);
         fall.setToY(0);
         fall.play();
     }
@@ -373,7 +550,7 @@ public final class GameController {
     private void animateDraw(MahjongTileView tile) {
         tile.setOpacity(0); tile.setTranslateX(38);
         FadeTransition fade = new FadeTransition(Duration.millis(240), tile); fade.setToValue(1);
-        TranslateTransition slide = new TranslateTransition(Duration.millis(290), tile); slide.setToX(0);
+        TranslateTransition slide = new TranslateTransition(Duration.millis(240), tile); slide.setToX(0); slide.setInterpolator(Interpolator.EASE_OUT);
         new ParallelTransition(fade, slide).play();
     }
 
@@ -402,12 +579,22 @@ public final class GameController {
     private void show(Node node, boolean visible) { node.setVisible(visible); node.setManaged(visible); }
     private String signed(long score) { return score > 0 ? "+" + score : String.valueOf(score); }
     private String playerCaption(Seat seat) {
-        if (lanSession == null) return DemoSession.playerName(seat) + " · " + seatName(seat);
+        if (lanSession == null) return DemoSession.playerName(seat) + missingCaption(seat) + " · " + seatName(seat)
+                + (DemoSession.winners().contains(seat) ? " · 已胡" : "");
         String name = lanSession.currentRoom().orElseThrow().players().stream()
                 .filter(player -> player.seat() == seat).map(RoomPlayer::profile)
                 .map(profile -> profile.nickname() + (profile.id().equals(lanSession.localPlayer().id()) ? "（我）" : ""))
                 .findFirst().orElse("等待玩家");
-        return name + " · " + seatName(seat);
+        return name + missingCaption(seat) + " · " + seatName(seat) + (networkGame.winners().contains(seat) ? " · 已胡" : "");
+    }
+
+    private String missingCaption(Seat seat) {
+        if (choosingMissingSuit() && seat != localSeat()) {
+            boolean ready = lanSession == null ? DemoSession.missingSuits().containsKey(seat) : networkGame.missingSuitReady().contains(seat);
+            return ready ? " · 已定缺" : " · 定缺中";
+        }
+        TileType.Suit missing = missingSuits().get(seat);
+        return missing == null ? "" : " · 缺" + suitName(missing);
     }
 
     private EnumSet<PlayerActionType> currentActions() {
@@ -435,6 +622,17 @@ public final class GameController {
                 : lanSession.currentRoom().orElseThrow().players().stream()
                 .filter(player -> player.profile().id().equals(lanSession.localPlayer().id()))
                 .map(RoomPlayer::seat).findFirst().orElseThrow();
+    }
+
+    private boolean showFinalSettlement() {
+        if (networkGame == null || networkGame.status() != GameStatus.FINISHED) return false;
+        if (!settlementShown) {
+            settlementShown = true;
+            turnClock.stop();
+            closeGameSubscription();
+            AppNavigator.settlement();
+        }
+        return true;
     }
 
     private void closeGameSubscription() {

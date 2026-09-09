@@ -42,4 +42,22 @@ class SqliteRepositoryTest {
         assertEquals(1, games.recentGames(east, 10).size());
         assertEquals("南家", games.recentOpponents(east, 10).get(0).nickname());
     }
+    @Test void ledgerIsPersistedOnceWithBothSidesAndRound() throws Exception {
+        SqliteDatabase database = new SqliteDatabase(tempDir.resolve("ledger.db")); database.migrate();
+        var games = new SqliteGameRecordRepository(database);
+        var entry = new com.campus.mahjong.model.game.ScoreEntry(1, 2,
+                Optional.of(com.campus.mahjong.model.common.MahjongTypes.Seat.SOUTH),
+                Optional.of(com.campus.mahjong.model.common.MahjongTypes.Seat.EAST), 64, "自摸", java.util.List.of("碰碰胡"));
+        var names = Map.of(com.campus.mahjong.model.common.MahjongTypes.Seat.SOUTH, "南家",
+                com.campus.mahjong.model.common.MahjongTypes.Seat.EAST, "东家");
+        games.recordLedger("match", java.util.List.of(entry), names);
+        games.recordLedger("match", java.util.List.of(entry), names);
+        try (var connection = database.connect(); var query = connection.createStatement();
+             var rows = query.executeQuery("SELECT * FROM match_ledger")) {
+            assertTrue(rows.next()); assertEquals("南家", rows.getString("payer"));
+            assertEquals("东家", rows.getString("payee")); assertEquals(64, rows.getLong("amount"));
+            assertEquals(2, rows.getInt("round_number")); assertTrue(!rows.next());
+        }
+    }
+
 }

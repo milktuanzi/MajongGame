@@ -220,7 +220,13 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
 
     @Override
     public CompletionStage<Settlement> latestSettlement(GameId gameId) {
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("联机结算将在下一阶段实现"));
+        GameSnapshot current = requireGame();
+        if (!current.gameId().equals(gameId) || current.status() != GameStatus.FINISHED)
+            return CompletableFuture.failedFuture(new IllegalStateException("全部轮次尚未结束"));
+        var changes = current.players().stream().map(player -> new ScoreChange(player.playerId(),
+                0, player.score(), player.score(), java.util.Map.<String, Integer>of())).toList();
+        return CompletableFuture.completedFuture(new Settlement(gameId, current.currentRound(), changes,
+                Optional.empty(), "全部轮次结束"));
     }
 
     @Override

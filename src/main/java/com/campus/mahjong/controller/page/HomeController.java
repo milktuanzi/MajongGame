@@ -13,6 +13,9 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.application.Platform;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import com.campus.mahjong.view.component.MahjongTileView;
+import com.campus.mahjong.model.game.TileType;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +25,7 @@ import java.util.concurrent.CompletionStage;
 
 /** 联机好友房入口：创建房间或输入邀请码加入。 */
 public final class HomeController {
+    @FXML private HBox heroTiles;
     @FXML private TextField nicknameField;
     @FXML private TextField roomCodeField;
     @FXML private ComboBox<String> roundsBox;
@@ -53,6 +57,16 @@ public final class HomeController {
     @FXML
     private void initialize() {
         nicknameField.setText(DemoSession.nickname);
+        errorLabel.managedProperty().bind(errorLabel.textProperty().isNotEmpty());
+        errorLabel.visibleProperty().bind(errorLabel.managedProperty());
+        int index = 0;
+        for (TileType tile : List.of(TileType.MAN_1, TileType.GREEN, TileType.RED)) {
+            MahjongTileView view = new MahjongTileView(tile, false);
+            view.setRotate((index - 1) * 12);
+            view.setTranslateY(index == 1 ? -12 : 4);
+            heroTiles.getChildren().add(view);
+            index++;
+        }
         roundsBox.getItems().setAll("4 轮", "8 轮", "16 轮");
         multiplierBox.getItems().setAll("1 倍", "2 倍", "5 倍", "10 倍");
         scoreCapBox.getItems().setAll("不封顶", "64 分", "128 分", "256 分");
@@ -69,7 +83,7 @@ public final class HomeController {
         List.of(sichuan, changsha, northern, redCenter)
                 .forEach(button -> button.getStyleClass().remove("selected"));
         selected.getStyleClass().add("selected");
-        modeHintLabel.setText("已选择 " + names.get(selectedMode));
+        modeHintLabel.setText(names.get(selectedMode));
     }
 
     @FXML
@@ -118,12 +132,33 @@ public final class HomeController {
             }
             return;
         }
-        var fallback = DemoSession.friendLeaderboard();
-        for (int index = 0; index < names.length && index < fallback.size(); index++) {
-            var row = fallback.get(index);
-            names[index].setText(row.name() + (row.name().equals(DemoSession.nickname) ? "（我）" : ""));
-            scores[index].setText(String.format("%,d", row.score()));
+        for (int index = 0; index < names.length; index++) {
+            names[index].setText(index == 0 ? "打完第一场，留下你的战绩" : "等待牌友入榜");
+            scores[index].setText("—");
         }
+    }
+
+    @FXML private void showHelp() {
+        Alert help = new Alert(Alert.AlertType.INFORMATION);
+        help.setTitle("联机指南");
+        help.setHeaderText("四位好友，一起入座");
+        help.setContentText("1. 四台电脑连接同一 Wi-Fi 或热点。\n2. 房主选择玩法、轮次和倍率，创建好友房。\n3. 房主复制完整邀请地址，好友粘贴后加入。\n4. 全员准备后，由房主开始游戏。\n\n邀请格式：192.168.137.1:19090#836204\n首次联机请允许 Java 通过防火墙。\n\n胡牌后观战，剩余玩家继续；三家胡牌或牌墙耗尽自动换轮，全部轮次结束后展示总分与流水。");
+        help.initOwner(nicknameField.getScene().getWindow());
+        help.showAndWait();
+    }
+
+    @FXML private void showRanking() {
+        var rows = LocalDataServices.games().leaderboard(100);
+        Alert ranking = new Alert(Alert.AlertType.INFORMATION);
+        ranking.setTitle("牌友积分榜"); ranking.setHeaderText("本机保存的累计战绩");
+        ListView<String> list = new ListView<>();
+        for (int i = 0; i < rows.size(); i++) {
+            var row = rows.get(i);
+            list.getItems().add(String.format("%02d   %s    %,d 分 · %d 局 · %d 胜", i + 1, row.nickname(), row.totalScore(), row.games(), row.wins()));
+        }
+        list.setPlaceholder(new Label("还没有战绩，完成第一场好友局后再来看看。"));
+        list.setPrefSize(490, 330); ranking.getDialogPane().setContent(list);
+        ranking.initOwner(nicknameField.getScene().getWindow()); ranking.showAndWait();
     }
 
     private PlayerProfile savePlayer() {

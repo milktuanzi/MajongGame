@@ -15,12 +15,16 @@ public final class GameServer implements AutoCloseable {
     private final RoomManager rooms = new RoomManager(new InMemoryGameSessionService());
     private final Set<ClientConnection> connections = ConcurrentHashMap.newKeySet();
     private final Thread acceptThread;
+    private final java.util.concurrent.ScheduledExecutorService timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "mahjong-round-timer"); thread.setDaemon(true); return thread;
+    });
     private volatile boolean running = true;
 
     private GameServer(int port) throws IOException {
         serverSocket = new ServerSocket();
         serverSocket.setReuseAddress(true);
         serverSocket.bind(new InetSocketAddress(port));
+        timer.scheduleAtFixedRate(rooms::tick, 100, 100, java.util.concurrent.TimeUnit.MILLISECONDS);
         acceptThread = Thread.ofVirtual().name("mahjong-server-accept").start(this::acceptLoop);
     }
 
@@ -46,6 +50,7 @@ public final class GameServer implements AutoCloseable {
     @Override
     public void close() {
         running = false;
+        timer.shutdownNow();
         try { serverSocket.close(); } catch (IOException ignored) {}
         for (ClientConnection connection : connections.toArray(ClientConnection[]::new)) connection.close();
         acceptThread.interrupt();

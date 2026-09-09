@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.geometry.Insets?>
+<?import javafx.scene.Group?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
@@ -12,37 +12,57 @@
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label fx:id="scoreLabel" styleClass="score-chip"/>
                 <Label fx:id="wallLabel" styleClass="wall-chip"/>
+                <CheckBox fx:id="reducedMotion" text="简化动效" styleClass="motion-toggle"/>
                 <Button text="返回首页" onAction="#returnHome" styleClass="ghost-button"/>
             </HBox>
         </top>
         <center>
-            <StackPane prefHeight="610" styleClass="table-wrap">
-                <VBox alignment="CENTER" spacing="13" maxWidth="360" styleClass="table-center">
-                    <Label fx:id="actionTip" styleClass="turn-tip" wrapText="true"/>
-                </VBox>
-                <Label fx:id="topPlayerLabel" translateX="22" translateY="20" StackPane.alignment="TOP_LEFT" styleClass="opponent-name"/>
-                <Label fx:id="rightPlayerLabel" translateX="-22" translateY="20" StackPane.alignment="TOP_RIGHT" styleClass="opponent-name"/>
-                <Label fx:id="leftPlayerLabel" translateX="22" translateY="-28" StackPane.alignment="BOTTOM_LEFT" styleClass="opponent-name"/>
-                <FlowPane fx:id="topDiscardPane" alignment="CENTER" hgap="2" vgap="2" prefWrapLength="188" maxWidth="194" rotate="180" translateY="-150" StackPane.alignment="TOP_CENTER" styleClass="seat-discard-area north-discard-area"/>
-                <FlowPane fx:id="leftDiscardPane" alignment="CENTER" hgap="2" vgap="2" prefWrapLength="188" maxWidth="194" rotate="90" translateX="166" StackPane.alignment="CENTER_LEFT" styleClass="seat-discard-area side-discard-area"/>
-                <FlowPane fx:id="rightDiscardPane" alignment="CENTER" hgap="2" vgap="2" prefWrapLength="188" maxWidth="194" rotate="-90" translateX="-166" StackPane.alignment="CENTER_RIGHT" styleClass="seat-discard-area side-discard-area"/>
-                <FlowPane fx:id="bottomDiscardPane" alignment="CENTER" hgap="2" vgap="2" prefWrapLength="188" maxWidth="194" translateY="130" StackPane.alignment="BOTTOM_CENTER" styleClass="seat-discard-area south-discard-area"/>
-                <VBox alignment="BOTTOM_CENTER" spacing="6" translateY="-5" StackPane.alignment="BOTTOM_CENTER" styleClass="local-table-dock">
-                    <HBox alignment="CENTER_RIGHT" maxWidth="1180"><Label fx:id="selectedTileLabel" text="尚未选牌" styleClass="selected-tile-label"/></HBox>
-                    <HBox alignment="CENTER" spacing="16" maxWidth="1240">
+            <StackPane fx:id="tableViewport" minWidth="0" minHeight="0" styleClass="table-wrap">
+                <Group><Pane fx:id="tableBoard" prefWidth="1000" prefHeight="1000" minWidth="1000" minHeight="1000" maxWidth="1000" maxHeight="1000">
+                    <Region layoutX="90" layoutY="10" prefWidth="820" prefHeight="820" styleClass="overhead-table"/>
+                    <Region layoutX="250" layoutY="170" prefWidth="500" prefHeight="500" styleClass="table-playing-field"/>
+                    <Pane layoutX="435" layoutY="366" prefWidth="130" prefHeight="108" mouseTransparent="true">
+                        <VBox layoutX="25" layoutY="14" prefWidth="80" prefHeight="80" alignment="CENTER" spacing="1" styleClass="turn-clock">
+                            <Label fx:id="turnTimerLabel" text="00:00" styleClass="turn-clock-time"/>
+                            <Label fx:id="turnPhaseLabel" text="出牌用时" styleClass="turn-clock-caption"/>
+                        </VBox>
+                        <Label fx:id="topTurnIndicator" text="▲" layoutX="52" layoutY="-8" styleClass="turn-pointer"/>
+                        <Label fx:id="bottomTurnIndicator" text="▼" layoutX="52" layoutY="82" styleClass="turn-pointer"/>
+                        <Label fx:id="leftTurnIndicator" text="◀" layoutX="0" layoutY="36" styleClass="turn-pointer"/>
+                        <Label fx:id="rightTurnIndicator" text="▶" layoutX="104" layoutY="36" styleClass="turn-pointer"/>
+                    </Pane>
+                    <Label fx:id="actionFeedback" layoutX="457" layoutY="485" prefWidth="85" alignment="CENTER" visible="false" managed="false" mouseTransparent="true" styleClass="action-feedback"/>
+                    <Label fx:id="topPlayerLabel" layoutX="370" layoutY="38" prefWidth="260" alignment="CENTER" styleClass="opponent-name"/>
+                    <Label fx:id="rightPlayerLabel" layoutX="776" layoutY="470" prefWidth="130" alignment="CENTER" styleClass="opponent-name"/>
+                    <Label fx:id="leftPlayerLabel" layoutX="94" layoutY="315" prefWidth="130" alignment="CENTER" styleClass="opponent-name"/>
+                    <Label fx:id="playerLabel" layoutX="370" layoutY="790" prefWidth="260" alignment="CENTER" styleClass="player-self"/>
+                    <FlowPane fx:id="topDiscardPane" layoutX="385" layoutY="190" prefWidth="230" prefHeight="132" prefWrapLength="230" alignment="CENTER" hgap="1" vgap="0" rotate="180" styleClass="seat-discard-area"/>
+                    <FlowPane fx:id="bottomDiscardPane" layoutX="385" layoutY="535" prefWidth="230" prefHeight="132" prefWrapLength="230" alignment="CENTER" hgap="1" vgap="0" rotate="0" styleClass="seat-discard-area"/>
+                    <FlowPane fx:id="leftDiscardPane" layoutX="180" layoutY="370" prefWidth="230" prefHeight="132" prefWrapLength="230" alignment="CENTER" hgap="1" vgap="0" rotate="90" styleClass="seat-discard-area"/>
+                    <FlowPane fx:id="rightDiscardPane" layoutX="590" layoutY="370" prefWidth="230" prefHeight="132" prefWrapLength="230" alignment="CENTER" hgap="1" vgap="0" rotate="-90" styleClass="seat-discard-area"/>
+                    <HBox fx:id="topMeldPane" layoutX="125" layoutY="95" prefWidth="350" prefHeight="36" spacing="6" alignment="CENTER_LEFT" rotate="180" styleClass="public-meld-zone" mouseTransparent="true"/>
+                    <HBox fx:id="bottomMeldPane" layoutX="520" layoutY="725" prefWidth="350" prefHeight="36" spacing="6" alignment="CENTER_LEFT" rotate="0" styleClass="public-meld-zone" mouseTransparent="true"/>
+                    <HBox fx:id="leftMeldPane" layoutX="-28" layoutY="580" prefWidth="350" prefHeight="36" spacing="6" alignment="CENTER_LEFT" rotate="90" styleClass="public-meld-zone" mouseTransparent="true"/>
+                    <HBox fx:id="rightMeldPane" layoutX="678" layoutY="235" prefWidth="350" prefHeight="36" spacing="6" alignment="CENTER_LEFT" rotate="-90" styleClass="public-meld-zone" mouseTransparent="true"/>
+                    <VBox layoutX="20" layoutY="838" prefWidth="960" alignment="TOP_CENTER" spacing="4" styleClass="local-table-dock">
+                        <HBox alignment="CENTER" spacing="18">
+                            <Label fx:id="actionTip" styleClass="turn-tip" maxWidth="820" wrapText="true"/>
+                            <Label fx:id="selectedTileLabel" text="尚未选牌" styleClass="selected-tile-label"/>
+                        </HBox>
                         <HBox fx:id="handPane" alignment="CENTER" spacing="5"/>
-                        <HBox fx:id="meldPane" alignment="CENTER_LEFT" spacing="10" styleClass="meld-area"/>
-                    </HBox>
-                    <HBox alignment="CENTER" spacing="10">
-                        <Button fx:id="passButton" text="过" onAction="#passAction" styleClass="action-button"/>
-                        <Button fx:id="chiButton" text="吃" onAction="#chiAction" styleClass="action-button"/>
-                        <Button fx:id="pengButton" text="碰" onAction="#pengAction" styleClass="action-button"/>
-                        <Button fx:id="gangButton" text="杠" onAction="#gangAction" styleClass="action-button"/>
-                        <Button fx:id="discardButton" text="打出选中牌" onAction="#discardSelected" disable="true" styleClass="secondary-button"/>
-                        <Button fx:id="huButton" text="胡" onAction="#winRound" styleClass="primary-button"/>
-                    </HBox>
-                </VBox>
-                <Label fx:id="playerLabel" translateX="-22" translateY="-28" StackPane.alignment="BOTTOM_RIGHT" styleClass="player-self"/>
+                        <HBox alignment="CENTER" spacing="10">
+                            <Button fx:id="missingWanButton" text="缺万" onAction="#chooseMissingWan" styleClass="action-button, missing-choice, missing-wan"/>
+                            <Button fx:id="missingPinButton" text="缺筒" onAction="#chooseMissingPin" styleClass="action-button, missing-choice, missing-pin"/>
+                            <Button fx:id="missingSouButton" text="缺条" onAction="#chooseMissingSou" styleClass="action-button, missing-choice, missing-sou"/>
+                            <Button fx:id="passButton" text="过" onAction="#passAction" styleClass="action-button"/>
+                            <Button fx:id="chiButton" text="吃" onAction="#chiAction" styleClass="action-button"/>
+                            <Button fx:id="pengButton" text="碰" onAction="#pengAction" styleClass="action-button"/>
+                            <Button fx:id="gangButton" text="杠" onAction="#gangAction" styleClass="action-button"/>
+                            <Button fx:id="discardButton" text="打出选中牌" onAction="#discardSelected" disable="true" styleClass="secondary-button"/>
+                            <Button fx:id="huButton" text="胡" onAction="#winRound" styleClass="primary-button"/>
+                        </HBox>
+                    </VBox>
+                </Pane></Group>
             </StackPane>
         </center>
     </BorderPane>

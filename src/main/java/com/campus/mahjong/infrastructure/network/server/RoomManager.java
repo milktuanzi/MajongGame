@@ -48,6 +48,14 @@ final class RoomManager {
         }
     }
 
+    void tick() {
+        for (Room room : roomsById.values()) {
+            synchronized (room) {
+                if (room.status == RoomStatus.PLAYING && room.gameId != null && games.expireMissingSuit(room.gameId)) room.broadcastGame();
+            }
+        }
+    }
+
     void disconnected(ClientConnection connection) {
         if (connection.roomId().isBlank()) return;
         Room room = roomsById.get(connection.roomId());
@@ -174,6 +182,7 @@ final class RoomManager {
 
         synchronized void perform(ClientConnection connection, MessageEnvelope envelope) {
             if (status != RoomStatus.PLAYING || gameId == null) throw new IllegalStateException("牌局尚未开始");
+            if (games.expireMissingSuit(gameId)) broadcastGame();
             Member member = requireMember(connection);
             Payloads.PlayerAction payload = JsonMessageCodec.value(envelope.payload(), Payloads.PlayerAction.class);
             ActionRequest request = new ActionRequest(gameId, member.profile.id(), payload.type(),

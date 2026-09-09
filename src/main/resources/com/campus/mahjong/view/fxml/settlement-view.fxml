@@ -2,22 +2,18 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
 <StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.campus.mahjong.controller.page.SettlementController" styleClass="app-root">
     <BorderPane maxWidth="1180" styleClass="page-shell">
-        <top><HBox alignment="CENTER_LEFT" styleClass="top-bar"><Label text="雀 隐" styleClass="brand-title"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="progressLabel" styleClass="selected-hint"/></HBox></top>
+        <top><HBox alignment="CENTER_LEFT" styleClass="top-bar"><Label text="闹麻麻 · 好友麻将" styleClass="brand-title"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="progressLabel" styleClass="selected-hint"/></HBox></top>
         <center>
-            <VBox alignment="TOP_CENTER" spacing="18">
-                <padding><Insets top="28" right="55" bottom="28" left="55"/></padding>
-                <VBox alignment="CENTER" spacing="4"><Label fx:id="resultTitle" styleClass="hero-title"/><Label fx:id="resultSubtitle" styleClass="selected-hint"/></VBox>
-                <VBox fx:id="roundRows" spacing="2" maxWidth="780" styleClass="setup-card"/>
-                <HBox spacing="16" maxWidth="780">
-                    <VBox fx:id="roomRanking" spacing="10" HBox.hgrow="ALWAYS" styleClass="content-card"><Label text="本房间积分" styleClass="section-title"/><Label text="仅统计当前房间" styleClass="section-subtitle"/></VBox>
-                    <VBox fx:id="friendRanking" spacing="10" HBox.hgrow="ALWAYS" styleClass="content-card"><Label text="好友累计积分" styleClass="section-title"/><Label text="跨房间长期保留" styleClass="section-subtitle"/></VBox>
-                </HBox>
-                <HBox alignment="CENTER" spacing="12"><Button text="返回首页" onAction="#returnHome" styleClass="secondary-button"/><Button fx:id="nextRoundButton" onAction="#nextRound" styleClass="primary-button"/></HBox>
-                <Label text="本局分数已计入房间排名与好友累计积分；下一阶段将由服务端统一确认并广播结算。" styleClass="privacy-tip" wrapText="true"/>
+            <VBox spacing="12">
+                <padding><Insets top="14" right="32" bottom="14" left="32"/></padding>
+                <HBox alignment="CENTER_LEFT" spacing="20"><Label fx:id="resultTitle" styleClass="section-title"/><Label fx:id="resultSubtitle" styleClass="selected-hint"/></HBox>
+                <VBox fx:id="roundRows" spacing="0" styleClass="setup-card"/>
+                <Label text="逐笔流水 · 积分由付款方转入收款方，轮末记录不产生额外扣分" styleClass="section-subtitle"/>
+                <TableView fx:id="ledgerTable" prefHeight="260" minHeight="130" VBox.vgrow="ALWAYS"/>
+                <HBox alignment="CENTER_LEFT" spacing="16"><Label fx:id="saveStatus" wrapText="true" styleClass="selected-hint"/><Region HBox.hgrow="ALWAYS"/><Button text="完成 · 返回首页" onAction="#returnHome" styleClass="primary-button"/></HBox>
             </VBox>
         </center>
     </BorderPane>

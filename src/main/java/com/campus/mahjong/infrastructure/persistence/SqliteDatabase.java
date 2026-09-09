@@ -62,6 +62,12 @@ public final class SqliteDatabase {
                       score_delta INTEGER NOT NULL,
                       PRIMARY KEY (game_id, player_id)
                     )""");
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS match_ledger (
+                      match_id TEXT NOT NULL, sequence INTEGER NOT NULL, round_number INTEGER NOT NULL,
+                      payer TEXT, payee TEXT, amount INTEGER NOT NULL, reason TEXT NOT NULL, patterns TEXT NOT NULL,
+                      PRIMARY KEY (match_id, sequence)
+                    )""");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_friend_scores_rank ON friend_scores(total_score DESC)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_game_records_time ON game_records(played_at DESC)");
         } catch (SQLException exception) {

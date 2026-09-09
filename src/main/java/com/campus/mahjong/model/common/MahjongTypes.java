@@ -15,7 +15,7 @@ public final class MahjongTypes {
     public enum RoomStatus { WAITING, READY_CHECK, PLAYING, FINISHED, CLOSED }
     public enum GameStatus { PREPARING, DEALING, PLAYING, SETTLING, FINISHED, ABORTED }
     public enum Seat { EAST, SOUTH, WEST, NORTH }
-    public enum PlayerActionType { DRAW, DISCARD, CHI, PENG, GANG, HU, PASS, READY }
+    public enum PlayerActionType { DRAW, DISCARD, CHI, PENG, GANG, HU, PASS, READY, DING_QUE }
     public enum PageId { HOME, FRIEND_ROOM_SETUP, ROOM, GAME, RESULT }
 
     public record PlayerId(String value) {
@@ -93,9 +93,15 @@ public final class MahjongTypes {
                                int currentRound, Seat dealer, Seat currentTurn,
                                List<PlayerPublicState> players, List<Tile> ownHand,
                                Optional<Tile> drawnTile, List<ActionOption> availableActions,
-                               int wallRemaining, long revision) {
+                               int wallRemaining, long revision, boolean waitingForClaims, long actionStartedAtMillis,
+                               java.util.Set<Seat> winners, List<com.campus.mahjong.model.game.ScoreEntry> ledger,
+                               boolean choosingMissingSuit, long missingSuitDeadline,
+                               Map<Seat, com.campus.mahjong.model.game.TileType.Suit> missingSuits,
+                               java.util.Set<Seat> missingSuitReady) {
         public GameSnapshot {
             players = List.copyOf(players); ownHand = List.copyOf(ownHand);
+            winners = java.util.Set.copyOf(winners); ledger = List.copyOf(ledger);
+            missingSuits = Map.copyOf(missingSuits); missingSuitReady = java.util.Set.copyOf(missingSuitReady);
             Objects.requireNonNull(drawnTile);
             availableActions = List.copyOf(availableActions);
             if (wallRemaining < 0 || revision < 0) throw new IllegalArgumentException("invalid game snapshot");

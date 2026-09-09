@@ -102,7 +102,7 @@
 .room-progress .bar { -fx-background-color: #67b886; }
 .room-progress .track { -fx-background-color: #e7eee9; }
 
-.game-root { -fx-font-family: "Microsoft YaHei UI", "Segoe UI"; -fx-background-color: #194a31; -fx-background-image: url("../image/mahjong-table-layout-v2.png"); -fx-background-size: cover; -fx-background-position: center; }
+.game-root { -fx-font-family: "PingFang SC", "Microsoft YaHei UI", "Segoe UI"; -fx-background-color: #153e32; }
 .game-shell { -fx-background-color: transparent; }
 .game-top { -fx-padding: 13 26; -fx-background-color: rgba(22,37,27,.84); -fx-border-color: transparent transparent rgba(240,205,122,.34) transparent; }
 .game-round { -fx-text-fill: #fff3cf; -fx-font-size: 17; -fx-font-weight: bold; }
@@ -110,7 +110,12 @@
 .score-chip, .wall-chip { -fx-background-radius: 15; -fx-padding: 7 12; -fx-font-size: 11; -fx-font-weight: bold; }
 .score-chip { -fx-background-color: rgba(106,72,25,.88); -fx-text-fill: #ffe7a0; }
 .wall-chip { -fx-background-color: rgba(31,104,66,.92); -fx-text-fill: #def7df; }
-.table-wrap { -fx-padding: 24 64 18 64; }
+.table-wrap { -fx-padding: 0; }
+.overhead-table { -fx-background-color: #b49a67, #314d3e, #368365; -fx-background-insets: 0, 3, 14; -fx-background-radius: 32, 30, 22; }
+.table-playing-field { -fx-border-color: rgba(224,239,219,.22); -fx-border-width: 1; -fx-border-radius: 24; }
+.public-meld-zone { -fx-padding: 0; -fx-background-color: transparent; -fx-border-color: transparent; }
+.meld-zone-title { -fx-text-fill: #e2efda; -fx-font-size: 11; }
+.meld-empty { -fx-text-fill: #d1e3d5; -fx-font-size: 11; -fx-padding: 14 0; }
 .opponent-name, .player-self { -fx-text-fill: #fff3d2; -fx-font-weight: bold; -fx-background-color: rgba(22,45,31,.76); -fx-background-radius: 12; -fx-border-color: rgba(248,214,139,.45); -fx-border-radius: 12; -fx-padding: 5 10; }
 .dealer-mark { -fx-background-color: linear-gradient(to bottom, #f5bd4b, #c88120); -fx-background-radius: 20; -fx-text-fill: #fff9e8; -fx-font-size: 18; -fx-padding: 9 13; }
 .tile-back { -fx-background-color: linear-gradient(to right, #12683e 0%, #2da360 12%, #e9ecdc 14%, #faf8ef 86%, #1d8a4f 88%, #0f5e37 100%); -fx-background-radius: 6; -fx-border-color: #e8d8a7; -fx-border-radius: 6; -fx-text-fill: transparent; -fx-font-size: 22; -fx-padding: 7 5; -fx-effect: dropshadow(gaussian, rgba(0,0,0,.38), 4, .18, 0, 3); }
@@ -129,15 +134,15 @@
 .mahjong-tile:selected .tile-face { -fx-fill: linear-gradient(to bottom, #fffef6, #ffedbd); -fx-stroke: #f7c34b; -fx-stroke-width: 2; -fx-effect: dropshadow(gaussian, #ffd66d, 15, .55, 0, 0); }
 .mahjong-tile:drawn .tile-face { -fx-stroke: #55a979; -fx-stroke-width: 1.5; }
 .meld-area { -fx-padding: 0 0 0 15; -fx-border-color: transparent transparent transparent rgba(242,207,122,.58); -fx-border-width: 0 0 0 1; }
-.meld-group { -fx-padding: 2 0; }
-.meld-kind { -fx-background-color: rgba(141,93,21,.9); -fx-background-radius: 8; -fx-padding: 1 8; -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: #ffecad; }
-.exposed-tile .tile-face { -fx-fill: linear-gradient(to bottom, #fffef8, #e8e8d9); -fx-stroke: #dfc97d; }
+.meld-group { -fx-padding: 0; }
+.meld-kind { -fx-background-color: rgba(141,93,21,.9); -fx-background-radius: 8; -fx-padding: 0 5; -fx-font-size: 9; -fx-font-weight: bold; -fx-text-fill: #ffecad; }
+.exposed-tile .tile-face { -fx-effect: null; -fx-fill: linear-gradient(to bottom, #fffef8, #e8e8d9); -fx-stroke: #dfc97d; }
 .tile-man-number { -fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #c84439; -fx-font-family: "SimSun"; }
 .tile-man-suit { -fx-font-size: 15; -fx-font-weight: bold; -fx-text-fill: #34684e; -fx-font-family: "SimSun"; }
 .tile-honor { -fx-font-size: 28; -fx-font-weight: bold; -fx-font-family: "SimSun"; }
 .honor-red { -fx-text-fill: #d83f38; }.honor-green { -fx-text-fill: #278651; }.honor-wind { -fx-text-fill: #386377; }.honor-white { -fx-text-fill: #657888; }
 .tile-compact { -fx-cursor: default; }
-.selected-tile-label { -fx-text-fill: #b66b41; -fx-font-size: 11; -fx-font-weight: bold; }
+.selected-tile-label { -fx-text-fill: #e1eccc; -fx-font-size: 11; -fx-font-weight: bold; }
 .action-button { -fx-background-color: #fff5df; -fx-background-radius: 10; -fx-border-color: #ebcc91; -fx-border-radius: 10; -fx-text-fill: #9b6b25; -fx-padding: 9 18; }
 
 .settlement-row, .settlement-winner { -fx-spacing: 14; -fx-padding: 12 8; -fx-border-color: transparent transparent #edf1ed transparent; }
@@ -147,3 +152,80 @@
 .ranking-line { -fx-alignment: CENTER_LEFT; -fx-padding: 6 2; }
 .score-positive { -fx-text-fill: #31a263; -fx-font-size: 20; -fx-font-weight: bold; -fx-min-width: 60; }
 .score-negative { -fx-text-fill: #dc6656; -fx-font-size: 16; -fx-font-weight: bold; -fx-min-width: 60; }
+
+.turn-clock { -fx-background-color: #205d49; -fx-background-radius: 40; -fx-border-color: #8fb89a; -fx-border-radius: 40; }
+.turn-clock-time { -fx-text-fill: #fff3cc; -fx-font-size: 22; -fx-font-weight: bold; -fx-font-family: "Menlo"; }
+.turn-clock-caption { -fx-text-fill: #d5e6d8; -fx-font-size: 10; }
+.turn-pointer { -fx-text-fill: #468b6d; -fx-font-size: 24; }
+.turn-pointer:active { -fx-text-fill: #ffdd75; -fx-effect: dropshadow(gaussian, rgba(255,219,102,.8), 12, .5, 0, 0); }
+
+/* 好友大厅：独立作用域，避免影响牌桌与结算页。 */
+.home-root { -fx-font-family: "PingFang SC", "Microsoft YaHei UI", "Segoe UI"; -fx-background-color: #f1f5f4; -fx-font-size: 13; }
+.lobby-header { -fx-padding: 20 34; -fx-border-color: transparent transparent #dce5e1 transparent; }
+.lobby-mark { -fx-min-width: 42; -fx-max-width: 42; -fx-min-height: 50; -fx-max-height: 50; -fx-background-color: #fffdfa; -fx-background-radius: 7; -fx-border-color: #d2ddd5; -fx-border-radius: 7; -fx-border-width: 1 1 4 1; }
+.lobby-mark .label { -fx-text-fill: #267157; -fx-font-size: 28; -fx-font-weight: bold; }
+.lobby-brand { -fx-font-size: 23; -fx-font-weight: bold; -fx-text-fill: #173e32; }
+.lobby-muted { -fx-text-fill: #486357; -fx-font-size: 12; }
+.lobby-link { -fx-background-color: transparent; -fx-text-fill: #285e4c; -fx-font-size: 12; -fx-padding: 5 0 5 10; -fx-cursor: hand; }
+.lobby-link:hover { -fx-text-fill: #bc493c; }
+.lobby-link:focused { -fx-border-color: #267157; -fx-border-radius: 4; }
+.lobby-scroll, .lobby-scroll > .viewport { -fx-background-color: transparent; -fx-border-color: transparent; }
+.lobby-body { -fx-padding: 22 34; }
+.lobby-hero { -fx-background-color: #174e3e; -fx-background-radius: 20; -fx-padding: 24 28; -fx-min-height: 190; }
+.lobby-kicker { -fx-text-fill: #bbd7c5; -fx-font-size: 10; -fx-font-weight: bold; }
+.lobby-headline { -fx-text-fill: #fffaf0; -fx-font-size: 38; -fx-font-weight: bold; -fx-line-spacing: -2; }
+.lobby-hero-copy { -fx-text-fill: #d1e4d8; -fx-font-size: 12; }
+.lobby-section { -fx-text-fill: #1b4235; -fx-font-size: 18; -fx-font-weight: bold; }
+.lobby-selection { -fx-background-color: #e0ece5; -fx-background-radius: 5; -fx-padding: 4 8; -fx-text-fill: #286246; -fx-font-size: 11; }
+.lobby-mode { -fx-alignment: CENTER_LEFT; -fx-padding: 13; -fx-background-color: #ffffff; -fx-background-radius: 10; -fx-border-color: #d7e2dc; -fx-border-radius: 10; -fx-cursor: hand; }
+.lobby-mode:hover { -fx-border-color: #6c9b82; -fx-background-color: #f7fcf8; }
+.lobby-mode.selected { -fx-background-color: #e1efe5; -fx-border-color: #267157; -fx-border-width: 2; -fx-padding: 12; }
+.lobby-mode:focused { -fx-effect: dropshadow(gaussian, rgba(38,113,87,.25), 8, .2, 0, 0); }
+.mode-glyph { -fx-min-width: 37; -fx-max-width: 37; -fx-min-height: 43; -fx-max-height: 43; -fx-background-color: #f0f5f1; -fx-background-radius: 5; }
+.mode-glyph .label { -fx-font-size: 23; -fx-text-fill: #38745b; -fx-font-weight: bold; }
+.lobby-mode.selected .mode-glyph { -fx-background-color: #267157; }
+.lobby-mode.selected .mode-glyph .label { -fx-text-fill: #fffdf4; }
+.mode-name { -fx-text-fill: #244c3b; -fx-font-size: 14; -fx-font-weight: bold; }
+.mode-description { -fx-text-fill: #4d6859; -fx-font-size: 11; }
+.lobby-ranking { -fx-padding: 0 2 0 2; }
+.lobby-rank-index { -fx-min-width: 28; -fx-text-fill: #60776c; -fx-font-size: 11; }
+.lobby-rank-name { -fx-text-fill: #345748; -fx-font-size: 12; }
+.lobby-rank-score { -fx-text-fill: #275e46; -fx-font-family: "Menlo"; -fx-font-size: 13; -fx-font-weight: bold; }
+.lobby-room-panel { -fx-background-color: white; -fx-background-radius: 18; -fx-padding: 24; -fx-border-color: #dce5df; -fx-border-radius: 18; }
+.lobby-form-title { -fx-font-size: 23; -fx-font-weight: bold; -fx-text-fill: #214535; }
+.lobby-field-label { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #365246; }
+.lobby-input, .lobby-select { -fx-background-color: #f6f8f7; -fx-border-color: #cfddd5; -fx-border-radius: 7; -fx-background-radius: 7; -fx-padding: 10 11; -fx-text-fill: #254737; -fx-prompt-text-fill: #687d71; -fx-font-size: 13; }
+.lobby-input:focused, .lobby-select:focused { -fx-border-color: #267157; -fx-background-color: #fff; }
+.lobby-select { -fx-padding: 6 8; }
+.lobby-select .list-cell { -fx-text-fill: #254737; }
+.lobby-create { -fx-background-color: #c85243; -fx-background-radius: 8; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-padding: 13; -fx-cursor: hand; }
+.lobby-create:hover { -fx-background-color: #ad4034; }
+.lobby-create:focused { -fx-border-color: #632d24; -fx-border-radius: 8; }
+.lobby-create:disabled, .lobby-join:disabled { -fx-opacity: .55; }
+.lobby-join { -fx-background-color: #eaf2ed; -fx-border-color: #b9cfc1; -fx-background-radius: 7; -fx-border-radius: 7; -fx-text-fill: #285e45; -fx-padding: 10; -fx-font-weight: bold; -fx-cursor: hand; }
+.lobby-join:hover { -fx-background-color: #dcece1; }
+.lobby-join:focused { -fx-border-color: #267157; }
+.lobby-error { -fx-text-fill: #a6382b; -fx-font-size: 11; }
+.lobby-footer { -fx-padding: 14 34; -fx-border-color: #dce5e1 transparent transparent transparent; }
+.lobby-footer-title { -fx-text-fill: #315948; -fx-font-size: 12; }
+
+/* 清晰牌面：统一白瓷底与轻薄绿背。 */
+.tile-face { -fx-fill: #fffefa; -fx-stroke: #d9ddd5; -fx-stroke-width: .8; -fx-effect: dropshadow(gaussian, rgba(10,35,26,.22), 3, .1, 0, 2); }
+.tile-depth { -fx-fill: #47715e; -fx-stroke: #315643; -fx-stroke-width: .6; }
+.mahjong-tile:disabled { -fx-opacity: 1; }
+.mahjong-tile:selected .tile-face { -fx-fill: #fff8df; -fx-stroke: #e4b85a; -fx-stroke-width: 2; -fx-effect: dropshadow(gaussian, rgba(247,210,115,.5), 8, .2, 0, 0); }
+.mahjong-tile:drawn .tile-face { -fx-stroke: #79b895; -fx-stroke-width: 1.5; }
+.motion-toggle { -fx-text-fill: #d4e4d7; -fx-font-size: 11; }
+.game-top .ghost-button { -fx-text-fill: #dfebdf; }
+
+.action-feedback { -fx-font-family: "Kaiti SC"; -fx-font-size: 42; -fx-font-weight: bold; -fx-text-fill: #ffe098; -fx-effect: dropshadow(gaussian, rgba(20,55,37,.6), 5, .3, 0, 2); }
+
+.local-table-dock .turn-tip { -fx-padding: 2 8; }
+
+.missing-suit-tile .tile-face { -fx-stroke: #d7904e; -fx-stroke-width: 2; -fx-fill: #fff1df; }
+
+.missing-choice { -fx-font-size: 18px; -fx-font-weight: bold; -fx-padding: 6 20; -fx-background-color: #fffdf6; -fx-cursor: hand; }
+.missing-wan { -fx-text-fill: #9c3838; }
+.missing-pin { -fx-text-fill: #334f87; }
+.missing-sou { -fx-text-fill: #23734f; }
+.missing-choice:hover, .missing-choice:focused { -fx-background-color: #f5e8c8; -fx-border-color: #bd914a; }

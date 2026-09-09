@@ -11,6 +11,10 @@ import java.util.Optional;
 public interface GameRecordRepository {
     void recordRound(String recordId, String roomCode, ModeCode mode, int round,
                      Map<PlayerId, PlayerRoundScore> scores, Optional<PlayerId> winner);
+    void recordRound(String recordId, String roomCode, ModeCode mode, int round,
+                     Map<PlayerId, PlayerRoundScore> scores, java.util.Set<PlayerId> winners);
+    void recordLedger(String matchId, List<com.campus.mahjong.model.game.ScoreEntry> entries,
+                      Map<com.campus.mahjong.model.common.MahjongTypes.Seat, String> names);
     List<FriendScoreEntry> leaderboard(int limit);
     List<FriendScoreEntry> recentOpponents(PlayerId playerId, int limit);
     List<GameRecord> recentGames(PlayerId playerId, int limit);

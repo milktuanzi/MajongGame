@@ -44,7 +44,10 @@ public final class DemoSession {
     /** 弃牌停顿结束后才开放的本机响应窗口。 */
     private static boolean claimPromptOpen;
     private static RoundResult lastResult;
+    private static String matchId = UUID.randomUUID().toString();
+    public static String matchId() { return matchId; }
     private static MahjongRound roundEngine;
+    private static com.campus.mahjong.model.game.MahjongMatch match;
 
     static {
         friendScores.put("山海客", 2680L);
@@ -82,6 +85,8 @@ public final class DemoSession {
         roomStarted = false;
         lastResult = null;
         claimPromptOpen = false;
+        match = null;
+        roundEngine = null;
         roomScores.clear();
         resetPlayers();
         resetHand();
@@ -126,8 +131,12 @@ public final class DemoSession {
     }
     /** 已副露的碰、杠牌组，供本机与联机快照的牌桌视图复用。 */
     public static List<Meld> localMelds() {
-        return roundEngine == null ? List.of() : roundEngine.melds(Seat.EAST);
+        return meldsForSeat(Seat.EAST);
     }
+    public static List<Meld> meldsForSeat(Seat seat) {
+        return roundEngine == null ? List.of() : roundEngine.melds(seat);
+    }
+
     public static List<String> discards() {
         if (roundEngine == null) return List.copyOf(discards);
         List<String> all = new ArrayList<>();
@@ -143,6 +152,18 @@ public final class DemoSession {
     public static int currentRound() { return currentRound; }
     public static int totalRounds() { return Integer.parseInt(rounds.replace("轮", "").trim()); }
     public static int remainingTiles() { return roundEngine == null ? remainingTiles : roundEngine.wallRemaining(); }
+    public static boolean choosingMissingSuit() { return roundEngine != null && roundEngine.phase() == RoundPhase.CHOOSING_MISSING_SUIT; }
+    public static long missingSuitDeadline() { return roundEngine == null ? 0 : roundEngine.missingSuitDeadline(); }
+    public static Map<Seat, TileType.Suit> missingSuits() { return roundEngine == null ? Map.of() : roundEngine.missingSuits(); }
+    public static List<String> discardableTiles() { return roundEngine == null ? hand() : roundEngine.discardableTiles(Seat.EAST).stream().map(TileType::displayName).toList(); }
+    public static void chooseMissingSuit(TileType.Suit suit) {
+        synchronizeProgress();
+        roundEngine.chooseMissingSuit(Seat.EAST, suit, roundEngine.revision());
+        synchronizeProgress();
+    }
+    public static Seat currentTurnSeat() { return roundEngine == null ? Seat.EAST : roundEngine.currentTurn(); }
+    public static boolean waitingForClaims() { return roundEngine != null && roundEngine.phase() == RoundPhase.WAITING_FOR_CLAIMS; }
+    public static long actionStartedAtMillis() { return roundEngine == null ? 0 : roundEngine.actionStartedAtMillis(); }
     public static String currentTurnName() { return players.get(turnIndex).name(); }
     public static boolean roomStarted() { return roomStarted; }
     public static RoundResult lastResult() { return lastResult; }
@@ -163,7 +184,9 @@ public final class DemoSession {
                 Integer.parseInt(multiplier.replace("倍", "").trim()),
                 scoreCap.equals("不封顶") ? Optional.empty() : Optional.of(Integer.parseInt(scoreCap.replace("分", "").trim())),
                 totalRounds(), false, "");
-        roundEngine = MahjongRound.start(settings, System.nanoTime());
+        matchId = UUID.randomUUID().toString();
+        match = new com.campus.mahjong.model.game.MahjongMatch(settings, System.nanoTime(), currentRound);
+        roundEngine = match.round();
         lastResult = null;
         claimPromptOpen = false;
     }
@@ -187,7 +210,9 @@ public final class DemoSession {
      * 因而不会再把三家自动玩家的出牌压缩到同一帧。
      */
     public static String advanceSimulationStep() {
+        synchronizeProgress();
         if (roundEngine == null) return "牌局尚未开始";
+        if (choosingMissingSuit()) return "请选择本轮定缺花色";
         if (roundEngine.phase() == RoundPhase.FINISHED) return finishMessage();
         if (roundEngine.phase() == RoundPhase.WAITING_FOR_CLAIMS) {
             if (claimPromptOpen) return "等待你的碰、杠、胡或过操作";
@@ -202,7 +227,12 @@ public final class DemoSession {
         if (roundEngine.currentTurn() == Seat.EAST) return "轮到你摸牌并出牌";
 
         Seat bot = roundEngine.currentTurn();
-        List<TileType> botHand = roundEngine.hand(bot);
+        if (roundEngine.legalActions(bot).contains(PlayerActionType.HU)) {
+            roundEngine.declareSelfDraw(bot, roundEngine.revision());
+            synchronizeProgress();
+            return playerName(bot) + " 自摸，其他玩家继续";
+        }
+        List<TileType> botHand = roundEngine.discardableTiles(bot);
         TileType choice = chooseTestDiscard(bot, botHand);
         boolean isDrawn = roundEngine.drawnTile(bot).filter(choice::equals).isPresent();
         roundEngine.discard(bot, choice, isDrawn, roundEngine.revision());
@@ -211,14 +241,14 @@ public final class DemoSession {
     }
 
     public static boolean shouldAdvanceSimulation() {
-        return roundEngine != null && roundEngine.phase() != RoundPhase.FINISHED
+        return roundEngine != null && !choosingMissingSuit() && roundEngine.phase() != RoundPhase.FINISHED
                 && !claimPromptOpen
                 && !(roundEngine.phase() == RoundPhase.WAITING_FOR_DISCARD && roundEngine.currentTurn() == Seat.EAST);
     }
 
     private static String finishMessage() {
-        applyOutcome(roundEngine.outcome().orElseThrow());
-        return "牌局结束：" + lastResult.reason();
+        synchronizeProgress();
+        return match.finished() ? "全部轮次结束" : "已进入第 " + currentRound + " 轮";
     }
 
     /** 自动玩家优先弃出可供本机碰/杠的牌，使本地联调无需等待很久。 */
@@ -230,14 +260,15 @@ public final class DemoSession {
                     .findFirst();
             if (candidate.isPresent()) return candidate.get();
         }
-        return roundEngine.drawnTile(bot).orElse(botHand.get(botHand.size() - 1));
+        return roundEngine.drawnTile(bot).filter(botHand::contains).orElse(botHand.get(botHand.size() - 1));
     }
 
     private static void passBotClaims() {
         Seat discarder = roundEngine.lastDiscarder().orElseThrow();
         long revision = roundEngine.revision();
         for (Seat seat : Seat.values()) {
-            if (seat != Seat.EAST && seat != discarder) {
+            if (seat != Seat.EAST && seat != discarder
+                    && roundEngine.legalActions(seat).contains(PlayerActionType.PASS)) {
                 roundEngine.submitClaim(seat, PlayerActionType.PASS, revision);
             }
         }
@@ -264,10 +295,8 @@ public final class DemoSession {
         try {
             roundEngine.submitClaim(Seat.EAST, action, roundEngine.revision());
             claimPromptOpen = false;
-            if (roundEngine.phase() == RoundPhase.FINISHED) {
-                applyOutcome(roundEngine.outcome().orElseThrow());
-                return "胡牌成功";
-            }
+            synchronizeProgress();
+            if (match.finished()) return "全部轮次结束";
             return switch (action) {
                 case PENG -> "碰牌成功，请选择一张手牌打出";
                 case GANG -> "杠牌成功，已补摸一张牌";
@@ -300,8 +329,37 @@ public final class DemoSession {
         }
     }
 
+    /** 牌桌仅在整场轮次全部结束时导航到结算页。 */
     public static boolean roundFinished() {
-        return roundEngine != null && roundEngine.phase() == RoundPhase.FINISHED;
+        synchronizeProgress();
+        return match != null && match.finished();
+    }
+
+    public static java.util.Set<Seat> winners() { return roundEngine == null ? java.util.Set.of() : roundEngine.winners(); }
+    public static java.util.List<com.campus.mahjong.model.game.ScoreEntry> ledger() {
+        return match == null ? java.util.List.of() : match.ledger();
+    }
+
+    public static void synchronizeProgress() {
+        if (match == null) return;
+        match.synchronizeRound();
+        roundEngine = match.round();
+        if (choosingMissingSuit()) {
+            for (Seat seat : List.of(Seat.SOUTH, Seat.WEST, Seat.NORTH)) {
+                if (!roundEngine.missingSuits().containsKey(seat))
+                    roundEngine.chooseMissingSuit(seat, roundEngine.recommendedMissingSuit(seat), roundEngine.revision());
+            }
+        }
+        if (currentRound != match.roundNumber()) claimPromptOpen = false;
+        currentRound = match.roundNumber();
+        for (Seat seat : Seat.values()) {
+            String name = playerName(seat);
+            long score = match.scores().get(seat);
+            long previous = roomScores.getOrDefault(name, 0L);
+            friendScores.merge(name, score - previous, Long::sum);
+            roomScores.put(name, score);
+        }
+        if (match.finished()) lastResult = new RoundResult(currentRound, "", "全部轮次结束", Map.copyOf(roomScores));
     }
 
     public static RoundResult declareLocalWin() {
@@ -312,32 +370,9 @@ public final class DemoSession {
         } else {
             roundEngine.declareSelfDraw(Seat.EAST, roundEngine.revision());
         }
-        return applyOutcome(roundEngine.outcome().orElseThrow());
-    }
-
-    private static RoundResult applyOutcome(RoundOutcome outcome) {
-        if (lastResult != null) return lastResult;
-        Map<String, Long> changes = new LinkedHashMap<>();
-        for (Seat seat : Seat.values()) {
-            changes.put(players.get(seat.ordinal()).name(), outcome.scoreChanges().getOrDefault(seat, 0L));
-        }
-        changes.forEach((name, delta) -> {
-            roomScores.merge(name, delta, Long::sum);
-            friendScores.merge(name, delta, Long::sum);
-        });
-        String winner = outcome.winner().map(seat -> players.get(seat.ordinal()).name()).orElse("流局");
-        String patterns = outcome.patterns().isEmpty() ? outcome.reason() : String.join(" · ", outcome.patterns());
-        lastResult = new RoundResult(currentRound, winner, outcome.reason() + " · " + patterns, Map.copyOf(changes));
+        claimPromptOpen = false;
+        synchronizeProgress();
         return lastResult;
-    }
-
-    public static boolean hasNextRound() { return currentRound < totalRounds(); }
-
-    public static void nextRound() {
-        if (hasNextRound()) currentRound++;
-        resetHand();
-        startGame();
-        lastResult = null;
     }
 
     public static List<ScoreRow> friendLeaderboard() {

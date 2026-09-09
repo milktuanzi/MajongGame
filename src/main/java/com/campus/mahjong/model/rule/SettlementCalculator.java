@@ -7,6 +7,7 @@ import com.campus.mahjong.model.game.RoundOutcome;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /** 统一完成零和计分、基础倍率及封顶处理。 */
 public final class SettlementCalculator {
@@ -18,6 +19,11 @@ public final class SettlementCalculator {
 
     public RoundOutcome win(Seat winner, Seat supplier, boolean selfDraw,
                             FriendRoomSettings settings, List<String> patterns, int fan) {
+        return win(winner, supplier, selfDraw, settings, patterns, fan, java.util.EnumSet.allOf(Seat.class));
+    }
+
+    public RoundOutcome win(Seat winner, Seat supplier, boolean selfDraw,
+                            FriendRoomSettings settings, List<String> patterns, int fan, Set<Seat> activeSeats) {
         if (fan < 1) throw new IllegalArgumentException("fan must be positive");
         long basePayment = Math.multiplyExact(settings.baseMultiplier(), 8L * fan);
         long cap = settings.scoreCap().map(Integer::longValue).orElse(Long.MAX_VALUE);
@@ -25,7 +31,7 @@ public final class SettlementCalculator {
         if (selfDraw) {
             long payment = Math.min(basePayment, cap);
             for (Seat seat : Seat.values()) {
-                if (seat == winner) continue;
+                if (seat == winner || !activeSeats.contains(seat)) continue;
                 changes.put(seat, -payment);
                 changes.merge(winner, payment, Long::sum);
             }

@@ -2,69 +2,67 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
-<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.campus.mahjong.controller.page.HomeController" styleClass="app-root">
-    <BorderPane maxWidth="1440" styleClass="page-shell">
-        <top>
-            <HBox alignment="CENTER_LEFT" spacing="14" styleClass="top-bar">
-                <StackPane styleClass="brand-seal"><Label text="雀" styleClass="brand-seal-text"/></StackPane>
-                <VBox spacing="1"><Label text="雀 隐" styleClass="brand-title"/><Label text="好友联机麻将" styleClass="brand-subtitle"/></VBox>
-                <Label text="好友房" styleClass="offline-badge"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Label text="创建房间 · 邀请好友 · 多电脑联机" styleClass="local-tip"/>
-                <Button text="设置" styleClass="ghost-button"/>
-            </HBox>
-        </top>
-        <center>
-            <HBox alignment="CENTER" spacing="26">
-                <padding><Insets top="24" right="38" bottom="24" left="38"/></padding>
-                <VBox spacing="17" prefWidth="620" maxWidth="660" HBox.hgrow="ALWAYS">
-                    <VBox spacing="4">
-                        <Label text="和熟悉的人，打一场好牌" styleClass="eyebrow"/>
-                        <Label text="开一间好友房，等大家入座" styleClass="hero-title" wrapText="true"/>
-                        <Label text="房主开启电脑热点并创建房间，再把完整邀请地址发给好友。四台电脑连接同一热点即可加入。" styleClass="hero-description" wrapText="true"/>
-                    </VBox>
-                    <VBox spacing="12" styleClass="content-card">
-                        <HBox alignment="CENTER_LEFT">
-                            <VBox spacing="1"><Label text="选择玩法" styleClass="section-title"/><Label text="房主确定本房间的规则" styleClass="section-subtitle"/></VBox>
-                            <Region HBox.hgrow="ALWAYS"/><Label fx:id="modeHintLabel" text="已选择 四川麻将" styleClass="selected-hint"/>
-                        </HBox>
-                        <GridPane hgap="12" vgap="12">
-                            <columnConstraints><ColumnConstraints percentWidth="50"/><ColumnConstraints percentWidth="50"/></columnConstraints>
-                            <Button fx:id="sichuan" text="川  四川麻将\n血战到底 · 节奏明快" onAction="#chooseMode" maxWidth="Infinity" styleClass="mode-card,selected" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                            <Button fx:id="changsha" text="湘  长沙麻将\n番型丰富 · 有碰有趣" onAction="#chooseMode" maxWidth="Infinity" styleClass="mode-card" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                            <Button fx:id="northern" text="北  北方麻将\n传统规制 · 经典耐玩" onAction="#chooseMode" maxWidth="Infinity" styleClass="mode-card" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                            <Button fx:id="redCenter" text="中  红中麻将\n简单易学 · 新手友好" onAction="#chooseMode" maxWidth="Infinity" styleClass="mode-card" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                        </GridPane>
-                    </VBox>
-                    <VBox spacing="10" styleClass="history-card">
-                        <HBox><Label text="好友积分榜" styleClass="section-title"/><Region HBox.hgrow="ALWAYS"/><Label text="累计积分" styleClass="section-subtitle"/></HBox>
-                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="1" styleClass="rank-first"/><Label fx:id="rank1Name" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank1Score" styleClass="rank-score"/></HBox>
-                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="2" styleClass="rank-number"/><Label fx:id="rank2Name" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank2Score" styleClass="rank-score"/></HBox>
-                        <HBox spacing="12" alignment="CENTER_LEFT"><Label text="3" styleClass="rank-number"/><Label fx:id="rank3Name" styleClass="rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank3Score" styleClass="rank-score"/></HBox>
-                    </VBox>
-                </VBox>
-
-                <VBox spacing="15" prefWidth="400" minWidth="370" styleClass="setup-card">
-                    <VBox spacing="2"><Label text="创建或加入好友房" styleClass="setup-title"/><Label text="每台电脑控制一名玩家" styleClass="section-subtitle"/></VBox>
-                    <Separator/>
-                    <VBox spacing="6"><Label text="我的昵称" styleClass="field-label"/><TextField fx:id="nicknameField" promptText="请输入昵称" styleClass="player-field"/></VBox>
-                    <GridPane hgap="12" vgap="11">
-                        <columnConstraints><ColumnConstraints percentWidth="50"/><ColumnConstraints percentWidth="50"/></columnConstraints>
-                        <VBox spacing="6" GridPane.columnIndex="0"><Label text="轮次" styleClass="field-label"/><ComboBox fx:id="roundsBox" maxWidth="Infinity" styleClass="form-select"/></VBox>
-                        <VBox spacing="6" GridPane.columnIndex="1"><Label text="基础倍率" styleClass="field-label"/><ComboBox fx:id="multiplierBox" maxWidth="Infinity" styleClass="form-select"/></VBox>
-                        <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1"><Label text="封顶" styleClass="field-label"/><ComboBox fx:id="scoreCapBox" maxWidth="Infinity" styleClass="form-select"/></VBox>
-                        <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1"><Label text="人数" styleClass="field-label"/><Label text="4 人" maxWidth="Infinity" styleClass="static-field"/></VBox>
-                    </GridPane>
-                    <Button fx:id="createButton" text="创建好友房   ›" onAction="#createRoom" maxWidth="Infinity" styleClass="primary-button"/>
-                    <HBox alignment="CENTER" spacing="9"><Separator HBox.hgrow="ALWAYS"/><Label text="或加入已有房间" styleClass="section-subtitle"/><Separator HBox.hgrow="ALWAYS"/></HBox>
-                    <HBox spacing="9"><TextField fx:id="roomCodeField" promptText="房主IP:端口#房间码" HBox.hgrow="ALWAYS" styleClass="room-code-field"/><Button fx:id="joinButton" text="加入房间" onAction="#joinRoom" styleClass="secondary-button"/></HBox>
-                    <Label fx:id="errorLabel" styleClass="error-label"/>
-                    <Label text="示例：192.168.137.1:19090#836204。首次连接时请允许游戏通过系统防火墙。" styleClass="privacy-tip" wrapText="true"/>
-                </VBox>
-            </HBox>
-        </center>
-        <bottom><HBox alignment="CENTER_LEFT" spacing="12" styleClass="bottom-bar"><Label text="联机好友局" styleClass="bottom-title"/><Label text="房间等待 → 准备开局 → 实时牌局 → 结算排名" styleClass="bottom-copy"/><Region HBox.hgrow="ALWAYS"/><Button text="规则说明" styleClass="ghost-button"/><Button text="完整积分榜" styleClass="ghost-button"/></HBox></bottom>
-    </BorderPane>
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.campus.mahjong.controller.page.HomeController" styleClass="home-root">
+ <BorderPane maxWidth="1440">
+  <top><HBox alignment="CENTER_LEFT" spacing="14" styleClass="lobby-header">
+   <StackPane styleClass="lobby-mark"><Label text="發"/></StackPane>
+   <VBox spacing="2"><Label text="闹麻麻" styleClass="lobby-brand"/><Label text="好友麻将馆" styleClass="lobby-muted"/></VBox>
+   <Region HBox.hgrow="ALWAYS"/><Label text="四人一桌 · 局域网联机" styleClass="lobby-muted"/>
+   <Button text="联机指南  ↗" onAction="#showHelp" styleClass="lobby-link"/>
+  </HBox></top>
+  <center><ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="lobby-scroll">
+   <content><HBox spacing="28" alignment="TOP_CENTER" styleClass="lobby-body">
+    <VBox spacing="22" minWidth="460" prefWidth="700" HBox.hgrow="ALWAYS">
+     <HBox spacing="12" alignment="CENTER_LEFT" styleClass="lobby-hero">
+      <VBox spacing="9" HBox.hgrow="ALWAYS"><Label text="好 友 入 座，好 戏 开 场" styleClass="lobby-kicker"/>
+       <Label text="三缺一？&#10;就等你了。" styleClass="lobby-headline"/>
+       <Label text="把熟悉的人，聚在一张牌桌。" styleClass="lobby-hero-copy"/>
+      </VBox><HBox fx:id="heroTiles" spacing="-5" alignment="CENTER" mouseTransparent="true"/>
+     </HBox>
+     <VBox spacing="12">
+      <HBox alignment="CENTER_LEFT"><Label text="今天，玩哪一局？" styleClass="lobby-section"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="modeHintLabel" text="四川麻将" styleClass="lobby-selection"/></HBox>
+      <GridPane hgap="12" vgap="12"><columnConstraints><ColumnConstraints percentWidth="50"/><ColumnConstraints percentWidth="50"/></columnConstraints>
+       <Button fx:id="sichuan" onAction="#chooseMode" maxWidth="Infinity" accessibleText="四川麻将" styleClass="lobby-mode,selected" GridPane.columnIndex="0" GridPane.rowIndex="0">
+        <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="川"/></StackPane><VBox spacing="4"><Label text="四川麻将" styleClass="mode-name"/><Label text="缺一门 · 节奏明快" styleClass="mode-description"/></VBox></HBox></graphic>
+       </Button>
+       <Button fx:id="changsha" onAction="#chooseMode" maxWidth="Infinity" accessibleText="长沙麻将" styleClass="lobby-mode" GridPane.columnIndex="1" GridPane.rowIndex="0">
+        <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="湘"/></StackPane><VBox spacing="4"><Label text="长沙麻将" styleClass="mode-name"/><Label text="地方番型 · 多种组合" styleClass="mode-description"/></VBox></HBox></graphic>
+       </Button>
+       <Button fx:id="northern" onAction="#chooseMode" maxWidth="Infinity" accessibleText="北方麻将" styleClass="lobby-mode" GridPane.columnIndex="0" GridPane.rowIndex="1">
+        <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="北"/></StackPane><VBox spacing="4"><Label text="北方麻将" styleClass="mode-name"/><Label text="可吃牌 · 经典玩法" styleClass="mode-description"/></VBox></HBox></graphic>
+       </Button>
+       <Button fx:id="redCenter" onAction="#chooseMode" maxWidth="Infinity" accessibleText="红中麻将" styleClass="lobby-mode" GridPane.columnIndex="1" GridPane.rowIndex="1">
+        <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="中"/></StackPane><VBox spacing="4"><Label text="红中麻将" styleClass="mode-name"/><Label text="红中百搭 · 轻松入门" styleClass="mode-description"/></VBox></HBox></graphic>
+       </Button>
+      </GridPane>
+      <Label text="所有玩法均采用血战到底：三家胡牌或牌墙耗尽后，自动进入下一轮。" wrapText="true" styleClass="lobby-muted"/>
+     </VBox>
+     <VBox spacing="11" styleClass="lobby-ranking">
+      <HBox alignment="CENTER_LEFT"><Label text="牌友积分榜" styleClass="lobby-section"/><Region HBox.hgrow="ALWAYS"/><Button text="查看全部  ↗" onAction="#showRanking" styleClass="lobby-link"/></HBox>
+      <HBox spacing="12" alignment="CENTER_LEFT"><Label text="01" styleClass="lobby-rank-index"/><Label fx:id="rank1Name" styleClass="lobby-rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank1Score" styleClass="lobby-rank-score"/></HBox>
+      <HBox spacing="12" alignment="CENTER_LEFT"><Label text="02" styleClass="lobby-rank-index"/><Label fx:id="rank2Name" styleClass="lobby-rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank2Score" styleClass="lobby-rank-score"/></HBox>
+      <HBox spacing="12" alignment="CENTER_LEFT"><Label text="03" styleClass="lobby-rank-index"/><Label fx:id="rank3Name" styleClass="lobby-rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank3Score" styleClass="lobby-rank-score"/></HBox>
+     </VBox>
+    </VBox>
+    <VBox spacing="12" minWidth="330" prefWidth="380" maxWidth="400" maxHeight="620" styleClass="lobby-room-panel">
+     <HBox alignment="CENTER_LEFT"><Label text="开一桌好牌" styleClass="lobby-form-title"/><Region HBox.hgrow="ALWAYS"/><Label text="4 人局" styleClass="lobby-selection"/></HBox>
+     <Label text="你来定规则，好友来赴约。" styleClass="lobby-muted"/>
+     <VBox spacing="7"><Label text="怎么称呼你" styleClass="lobby-field-label"/><TextField fx:id="nicknameField" promptText="输入你的牌桌昵称" styleClass="lobby-input"/></VBox>
+     <GridPane hgap="12" vgap="12"><columnConstraints><ColumnConstraints percentWidth="50"/><ColumnConstraints percentWidth="50"/></columnConstraints>
+      <VBox spacing="7"><Label text="游戏轮次" styleClass="lobby-field-label"/><ComboBox fx:id="roundsBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
+      <VBox spacing="7" GridPane.columnIndex="1"><Label text="基础倍率" styleClass="lobby-field-label"/><ComboBox fx:id="multiplierBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
+      <VBox spacing="7" GridPane.rowIndex="1" GridPane.columnSpan="2"><Label text="积分封顶" styleClass="lobby-field-label"/><ComboBox fx:id="scoreCapBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
+     </GridPane>
+     <Button fx:id="createButton" text="创建好友房   →" onAction="#createRoom" maxWidth="Infinity" styleClass="lobby-create"/>
+     <Label text="创建后复制邀请地址，发给同一网络中的好友。" wrapText="true" styleClass="lobby-muted"/>
+     <Separator/>
+     <VBox spacing="9"><Label text="好友已经开桌？" styleClass="lobby-field-label"/>
+      <HBox spacing="8"><TextField fx:id="roomCodeField" promptText="粘贴完整邀请地址" onAction="#joinRoom" styleClass="lobby-input" HBox.hgrow="ALWAYS" minWidth="100"/><Button fx:id="joinButton" text="加入 ↗" onAction="#joinRoom" minWidth="74" styleClass="lobby-join"/></HBox>
+     </VBox>
+     <Label fx:id="errorLabel" wrapText="true" maxWidth="330" styleClass="lobby-error"/>
+    </VBox>
+   </HBox></content>
+  </ScrollPane></center>
+  <bottom><HBox spacing="12" alignment="CENTER_LEFT" styleClass="lobby-footer"><Label text="一桌四友，尽兴而归。" styleClass="lobby-footer-title"/><Region HBox.hgrow="ALWAYS"/><Label text="同一 Wi-Fi / 热点  ·  自动换轮  ·  逐笔结算" styleClass="lobby-muted"/></HBox></bottom>
+ </BorderPane>
 </StackPane>

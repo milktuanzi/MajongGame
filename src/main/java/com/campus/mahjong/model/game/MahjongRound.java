@@ -38,7 +38,12 @@ public final class MahjongRound {
     private TileType lastDiscard;
     private RoundPhase phase = RoundPhase.WAITING_FOR_DISCARD;
     private RoundOutcome outcome;
+    private final EnumSet<Seat> winners = EnumSet.noneOf(Seat.class);
+    private final List<RoundOutcome> wins = new ArrayList<>();
+    private final EnumMap<Seat, TileType.Suit> missingSuits = new EnumMap<>(Seat.class);
+    private long missingSuitDeadline;
     private long revision;
+    private long actionStartedAtMillis = System.currentTimeMillis();
 
     private MahjongRound(FriendRoomSettings settings, long randomSeed) {
         this.settings = settings;
@@ -56,16 +61,68 @@ public final class MahjongRound {
         }
         sortAllHands();
         drawnTiles.put(Seat.EAST, wall.removeFirst());
+        if (settings.mode() == com.campus.mahjong.model.common.MahjongTypes.ModeCode.SICHUAN) {
+            phase = RoundPhase.CHOOSING_MISSING_SUIT;
+            missingSuitDeadline = System.currentTimeMillis() + 10_000;
+        }
     }
 
     public static MahjongRound start(FriendRoomSettings settings, long randomSeed) {
         return new MahjongRound(settings, randomSeed);
     }
 
+    public Map<Seat, TileType.Suit> missingSuits() { return Map.copyOf(missingSuits); }
+    public long missingSuitDeadline() { return missingSuitDeadline; }
+
+    public void chooseMissingSuit(Seat seat, TileType.Suit suit, long expectedRevision) {
+        requireRevision(expectedRevision);
+        requirePhase(RoundPhase.CHOOSING_MISSING_SUIT);
+        if (suit == null || suit == TileType.Suit.HONOR) throw new IllegalArgumentException("请选择万、筒或条");
+        if (missingSuits.containsKey(seat)) throw new IllegalStateException("定缺后本轮不能更改");
+        missingSuits.put(seat, suit);
+        if (missingSuits.size() == Seat.values().length) finishMissingSuitSelection();
+    }
+
+    public boolean expireMissingSuitSelection(long nowMillis) {
+        if (phase != RoundPhase.CHOOSING_MISSING_SUIT || nowMillis < missingSuitDeadline) return false;
+        for (Seat seat : Seat.values()) missingSuits.putIfAbsent(seat, recommendedMissingSuit(seat));
+        finishMissingSuitSelection();
+        return true;
+    }
+
+    public TileType.Suit recommendedMissingSuit(Seat seat) {
+        return List.of(TileType.Suit.MAN, TileType.Suit.PIN, TileType.Suit.SOU).stream()
+                .min(java.util.Comparator.comparingLong(suit -> hand(seat).stream().filter(tile -> tile.suit() == suit).count()))
+                .orElseThrow();
+    }
+
+    private void finishMissingSuitSelection() {
+        phase = RoundPhase.WAITING_FOR_DISCARD;
+        actionStartedAtMillis = System.currentTimeMillis();
+        revision++;
+    }
+
+    private boolean isMissingTile(Seat seat, TileType tile) { return tile.suit() == missingSuits.get(seat); }
+    public List<TileType> discardableTiles(Seat seat) {
+        if (phase != RoundPhase.WAITING_FOR_DISCARD || currentTurn != seat || winners.contains(seat)) return List.of();
+        List<TileType> all = hand(seat);
+        boolean mustDiscardMissing = all.stream().anyMatch(tile -> isMissingTile(seat, tile));
+        return all.stream().filter(tile -> !mustDiscardMissing || isMissingTile(seat, tile)).distinct().toList();
+    }
+
+    private boolean canWin(Seat seat, List<TileType> tiles) {
+        return tiles.stream().noneMatch(tile -> isMissingTile(seat, tile))
+                && melds.get(seat).stream().flatMap(meld -> meld.tiles().stream()).noneMatch(tile -> isMissingTile(seat, tile))
+                && regionalRule.canWin(tiles, melds.get(seat));
+    }
+
+    public java.util.Set<Seat> winners() { return java.util.Set.copyOf(winners); }
+    public List<RoundOutcome> wins() { return List.copyOf(wins); }
     public RoundPhase phase() { return phase; }
     public Seat currentTurn() { return currentTurn; }
     public int wallRemaining() { return wall.size(); }
     public long revision() { return revision; }
+    public long actionStartedAtMillis() { return actionStartedAtMillis; }
     public Optional<TileType> lastDiscard() { return Optional.ofNullable(lastDiscard); }
     public Optional<Seat> lastDiscarder() { return Optional.ofNullable(lastDiscarder); }
     public Optional<RoundOutcome> outcome() { return Optional.ofNullable(outcome); }
@@ -81,19 +138,24 @@ public final class MahjongRound {
 
     public EnumSet<PlayerActionType> legalActions(Seat seat) {
         EnumSet<PlayerActionType> actions = EnumSet.noneOf(PlayerActionType.class);
-        if (claimResponses.containsKey(seat)) return actions;
+        if (winners.contains(seat) || claimResponses.containsKey(seat)) return actions;
+        if (phase == RoundPhase.CHOOSING_MISSING_SUIT) {
+            if (!missingSuits.containsKey(seat)) actions.add(PlayerActionType.DING_QUE);
+            return actions;
+        }
         if (phase == RoundPhase.WAITING_FOR_DISCARD && seat == currentTurn) {
             actions.add(PlayerActionType.DISCARD);
-            if (regionalRule.canWin(hand(seat), melds.get(seat))) actions.add(PlayerActionType.HU);
+            if (canWin(seat, hand(seat))) actions.add(PlayerActionType.HU);
             if (hasConcealedGang(seat) || hasSupplementalGang(seat)) actions.add(PlayerActionType.GANG);
         } else if (phase == RoundPhase.WAITING_FOR_CLAIMS && seat != lastDiscarder) {
-            actions.add(PlayerActionType.PASS);
+            if (isMissingTile(seat, lastDiscard)) return actions;
             List<TileType> candidate = withLastDiscard(seat);
-            if (regionalRule.canWin(candidate, melds.get(seat))) actions.add(PlayerActionType.HU);
+            if (canWin(seat, candidate)) actions.add(PlayerActionType.HU);
             int count = count(seat, lastDiscard);
             if (count >= 2) actions.add(PlayerActionType.PENG);
             if (count >= 3) actions.add(PlayerActionType.GANG);
             if (regionalRule.allowChi() && seat == nextSeat(lastDiscarder) && findChiTiles(seat).isPresent()) actions.add(PlayerActionType.CHI);
+            if (!actions.isEmpty()) actions.add(PlayerActionType.PASS);
         }
         return actions;
     }
@@ -106,6 +168,7 @@ public final class MahjongRound {
         requireRevision(expectedRevision);
         requirePhase(RoundPhase.WAITING_FOR_DISCARD);
         if (seat != currentTurn) throw new IllegalStateException("尚未轮到 " + seat);
+        if (!discardableTiles(seat).contains(tile)) throw new IllegalArgumentException("必须优先打出定缺花色的牌");
         TileType drawn = drawnTiles.get(seat);
         if (discardDrawnTile && drawn == tile) {
             drawnTiles.remove(seat);
@@ -123,6 +186,14 @@ public final class MahjongRound {
         claimResponses.clear();
         phase = RoundPhase.WAITING_FOR_CLAIMS;
         revision++;
+        actionStartedAtMillis = System.currentTimeMillis();
+        // 无合法吃碰杠胡的座位自动过，不要求客户端发送无意义的响应。
+        for (Seat other : Seat.values()) {
+            if (other != lastDiscarder && legalActions(other).isEmpty()) {
+                claimResponses.put(other, PlayerActionType.PASS);
+            }
+        }
+        if (claimResponses.size() == 3) resolveClaims();
     }
 
     public void submitClaim(Seat seat, PlayerActionType action, long expectedRevision) {
@@ -138,14 +209,17 @@ public final class MahjongRound {
     public void declareSelfDraw(Seat seat, long expectedRevision) {
         requireRevision(expectedRevision);
         if (!legalActions(seat).contains(PlayerActionType.HU)) throw new IllegalStateException("当前手牌不能自摸");
+        requirePhase(RoundPhase.WAITING_FOR_DISCARD);
         var analysis = regionalRule.analyze(hand(seat), melds.get(seat));
-        finish(settlementCalculator.win(seat, null, true, settings, analysis.patterns(), analysis.fan()));
+        recordWin(seat, null, true, analysis.patterns(), analysis.fan());
+        continueAfterWin(seat);
     }
 
     public void declareConcealedGang(Seat seat, TileType tile, long expectedRevision) {
         requireRevision(expectedRevision);
         requirePhase(RoundPhase.WAITING_FOR_DISCARD);
-        if (seat != currentTurn || count(seat, tile) != 4) throw new IllegalStateException("不能暗杠该牌");
+        if (seat != currentTurn || isMissingTile(seat, tile) || count(seat, tile) != 4) throw new IllegalStateException("不能暗杠该牌");
+        mergeDrawnTile(seat);
         removeCopies(seat, tile, 4);
         melds.get(seat).add(new Meld(PlayerActionType.GANG, List.of(tile, tile, tile, tile), seat));
         drawFor(seat);
@@ -158,6 +232,7 @@ public final class MahjongRound {
         if (seat != currentTurn || !hasSupplementalGang(seat, tile)) {
             throw new IllegalStateException("不能补杠该牌");
         }
+        mergeDrawnTile(seat);
         removeCopies(seat, tile, 1);
         List<Meld> playerMelds = melds.get(seat);
         for (int index = 0; index < playerMelds.size(); index++) {
@@ -186,7 +261,7 @@ public final class MahjongRound {
         if (phase != RoundPhase.WAITING_FOR_DISCARD || currentTurn != seat) return List.of();
         List<TileType> candidates = new ArrayList<>();
         for (TileType tile : TileType.values()) {
-            if (count(seat, tile) == 4 || hasSupplementalGang(seat, tile)) candidates.add(tile);
+            if (!isMissingTile(seat, tile) && (count(seat, tile) == 4 || hasSupplementalGang(seat, tile))) candidates.add(tile);
         }
         return List.copyOf(candidates);
     }
@@ -201,12 +276,17 @@ public final class MahjongRound {
     }
 
     private void resolveClaims() {
-        Seat claimant = firstClaimant(PlayerActionType.HU);
-        if (claimant != null) {
-            var analysis = regionalRule.analyze(withLastDiscard(claimant), melds.get(claimant));
-            finish(settlementCalculator.win(claimant, lastDiscarder, false, settings, analysis.patterns(), analysis.fan()));
-            return;
+        boolean won = false;
+        for (int distance = 1; distance <= 3; distance++) {
+            Seat seat = advance(lastDiscarder, distance);
+            if (claimResponses.get(seat) == PlayerActionType.HU) {
+                var analysis = regionalRule.analyze(withLastDiscard(seat), melds.get(seat));
+                recordWin(seat, lastDiscarder, false, analysis.patterns(), analysis.fan());
+                won = true;
+            }
         }
+        if (won) { continueAfterWin(lastDiscarder); return; }
+        Seat claimant;
         claimant = firstClaimant(PlayerActionType.GANG);
         if (claimant != null) { applyExposedSet(claimant, PlayerActionType.GANG, 3); return; }
         claimant = firstClaimant(PlayerActionType.PENG);
@@ -235,7 +315,10 @@ public final class MahjongRound {
         phase = RoundPhase.WAITING_FOR_DISCARD;
         claimResponses.clear();
         if (type == PlayerActionType.GANG) drawFor(claimant);
-        else revision++;
+        else {
+            revision++;
+            actionStartedAtMillis = System.currentTimeMillis();
+        }
     }
 
     private void applyChi(Seat claimant) {
@@ -250,6 +333,7 @@ public final class MahjongRound {
         phase = RoundPhase.WAITING_FOR_DISCARD;
         claimResponses.clear();
         revision++;
+        actionStartedAtMillis = System.currentTimeMillis();
     }
 
     private Optional<List<TileType>> findChiTiles(Seat seat) {
@@ -267,19 +351,38 @@ public final class MahjongRound {
     }
 
     private void drawFor(Seat seat) {
-        if (wall.isEmpty()) { finish(settlementCalculator.draw()); return; }
+        if (wall.isEmpty()) { finishRound("牌墙耗尽"); return; }
         if (drawnTiles.containsKey(seat)) throw new IllegalStateException("尚有未处理的摸牌");
         drawnTiles.put(seat, wall.removeFirst());
         phase = RoundPhase.WAITING_FOR_DISCARD;
         claimResponses.clear();
         revision++;
+        actionStartedAtMillis = System.currentTimeMillis();
     }
 
-    private void finish(RoundOutcome result) {
-        outcome = result;
+    private void recordWin(Seat winner, Seat supplier, boolean selfDraw, List<String> patterns, int fan) {
+        EnumSet<Seat> active = EnumSet.allOf(Seat.class);
+        active.removeAll(winners);
+        wins.add(settlementCalculator.win(winner, supplier, selfDraw, settings, patterns, fan, active));
+        winners.add(winner);
+    }
+
+    private void continueAfterWin(Seat previous) {
+        claimResponses.clear();
+        if (winners.size() >= 3) { finishRound("三名玩家已胡牌"); return; }
+        currentTurn = nextSeat(previous);
+        drawFor(currentTurn);
+    }
+
+    private void finishRound(String reason) {
+        EnumMap<Seat, Long> totals = new EnumMap<>(Seat.class);
+        for (Seat seat : Seat.values()) totals.put(seat, 0L);
+        wins.forEach(win -> win.scoreChanges().forEach((seat, delta) -> totals.merge(seat, delta, Long::sum)));
+        outcome = new RoundOutcome(Optional.empty(), Optional.empty(), false, reason, List.of(), Map.copyOf(totals));
         phase = RoundPhase.FINISHED;
         claimResponses.clear();
         revision++;
+        actionStartedAtMillis = System.currentTimeMillis();
     }
 
     private void removeLastDiscardFromTable() {
@@ -294,7 +397,7 @@ public final class MahjongRound {
     }
 
     private boolean hasConcealedGang(Seat seat) {
-        for (TileType tile : TileType.values()) if (count(seat, tile) == 4) return true;
+        for (TileType tile : TileType.values()) if (!isMissingTile(seat, tile) && count(seat, tile) == 4) return true;
         return false;
     }
 
@@ -304,12 +407,20 @@ public final class MahjongRound {
     }
 
     private boolean hasSupplementalGang(Seat seat, TileType tile) {
-        return count(seat, tile) >= 1 && melds.get(seat).stream().anyMatch(meld ->
+        return !isMissingTile(seat, tile) && count(seat, tile) >= 1 && melds.get(seat).stream().anyMatch(meld ->
                 meld.type() == PlayerActionType.PENG && meld.tiles().stream().allMatch(tile::equals));
     }
 
     private int count(Seat seat, TileType tile) {
         return (int) hand(seat).stream().filter(tile::equals).count();
+    }
+
+    private void mergeDrawnTile(Seat seat) {
+        TileType drawn = drawnTiles.remove(seat);
+        if (drawn != null) {
+            hands.get(seat).add(drawn);
+            hands.get(seat).sort(Enum::compareTo);
+        }
     }
 
     private void removeCopies(Seat seat, TileType tile, int amount) {
@@ -332,7 +443,13 @@ public final class MahjongRound {
     }
 
     private void sortAllHands() { hands.values().forEach(hand -> hand.sort(Enum::compareTo)); }
-    private Seat nextSeat(Seat seat) { return advance(seat, 1); }
+    private Seat nextSeat(Seat seat) {
+        for (int distance = 1; distance <= 4; distance++) {
+            Seat next = advance(seat, distance);
+            if (!winners.contains(next)) return next;
+        }
+        throw new IllegalStateException("没有可继续操作的玩家");
+    }
     private Seat advance(Seat seat, int distance) {
         Seat[] seats = Seat.values();
         return seats[(seat.ordinal() + distance) % seats.length];
