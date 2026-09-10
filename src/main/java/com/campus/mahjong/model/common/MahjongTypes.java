@@ -15,7 +15,7 @@ public final class MahjongTypes {
     public enum RoomStatus { WAITING, READY_CHECK, PLAYING, FINISHED, CLOSED }
     public enum GameStatus { PREPARING, DEALING, PLAYING, SETTLING, FINISHED, ABORTED }
     public enum Seat { EAST, SOUTH, WEST, NORTH }
-    public enum PlayerActionType { DRAW, DISCARD, CHI, PENG, GANG, HU, PASS, READY, DING_QUE }
+    public enum PlayerActionType { DRAW, DISCARD, CHI, PENG, GANG, HU, PASS, READY, DING_QUE, EXCHANGE_THREE }
     public enum PageId { HOME, FRIEND_ROOM_SETUP, ROOM, GAME, RESULT }
 
     public record PlayerId(String value) {
@@ -97,11 +97,17 @@ public final class MahjongTypes {
                                java.util.Set<Seat> winners, List<com.campus.mahjong.model.game.ScoreEntry> ledger,
                                boolean choosingMissingSuit, long missingSuitDeadline,
                                Map<Seat, com.campus.mahjong.model.game.TileType.Suit> missingSuits,
-                               java.util.Set<Seat> missingSuitReady) {
+                               java.util.Set<Seat> missingSuitReady,
+                               boolean exchangingTiles, long exchangeDeadline, java.util.Set<Seat> exchangeReady,
+                               List<Tile> ownExchangeSelection, List<Tile> receivedExchangeTiles,
+                               Optional<com.campus.mahjong.model.game.ExchangeDirection> exchangeDirection) {
         public GameSnapshot {
             players = List.copyOf(players); ownHand = List.copyOf(ownHand);
             winners = java.util.Set.copyOf(winners); ledger = List.copyOf(ledger);
             missingSuits = Map.copyOf(missingSuits); missingSuitReady = java.util.Set.copyOf(missingSuitReady);
+            exchangeReady = java.util.Set.copyOf(exchangeReady);
+            ownExchangeSelection = List.copyOf(ownExchangeSelection); receivedExchangeTiles = List.copyOf(receivedExchangeTiles);
+            Objects.requireNonNull(exchangeDirection);
             Objects.requireNonNull(drawnTile);
             availableActions = List.copyOf(availableActions);
             if (wallRemaining < 0 || revision < 0) throw new IllegalArgumentException("invalid game snapshot");

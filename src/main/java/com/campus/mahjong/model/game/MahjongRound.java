@@ -43,11 +43,18 @@ public final class MahjongRound {
     private final List<RoundOutcome> wins = new ArrayList<>();
     private final EnumMap<Seat, TileType.Suit> missingSuits = new EnumMap<>(Seat.class);
     private long missingSuitDeadline;
+    public static final long EXCHANGE_TIMEOUT_MILLIS = 15_000;
+    private final EnumMap<Seat, List<TileType>> exchangeSelections = new EnumMap<>(Seat.class);
+    private final EnumMap<Seat, List<TileType>> exchangeReceived = new EnumMap<>(Seat.class);
+    private final Random exchangeRandom;
+    private ExchangeDirection exchangeDirection;
+    private long exchangeDeadline;
     private long revision;
     private long actionStartedAtMillis = System.currentTimeMillis();
 
     private MahjongRound(FriendRoomSettings settings, long randomSeed) {
         this.settings = settings;
+        this.exchangeRandom = new Random(randomSeed ^ 0x5DEECE66DL);
         this.regionalRule = RegionalRules.resolve(settings.mode());
         for (Seat seat : Seat.values()) {
             hands.put(seat, new ArrayList<>());
@@ -63,8 +70,8 @@ public final class MahjongRound {
         sortAllHands();
         drawnTiles.put(Seat.EAST, wall.removeFirst());
         if (settings.mode() == com.campus.mahjong.model.common.MahjongTypes.ModeCode.SICHUAN) {
-            phase = RoundPhase.CHOOSING_MISSING_SUIT;
-            missingSuitDeadline = System.currentTimeMillis() + 10_000;
+            phase = RoundPhase.EXCHANGING_TILES;
+            exchangeDeadline = System.currentTimeMillis() + EXCHANGE_TIMEOUT_MILLIS;
         }
     }
 
@@ -74,6 +81,70 @@ public final class MahjongRound {
 
     public Map<Seat, TileType.Suit> missingSuits() { return Map.copyOf(missingSuits); }
     public long missingSuitDeadline() { return missingSuitDeadline; }
+
+    public long exchangeDeadline() { return exchangeDeadline; }
+    public java.util.Set<Seat> exchangeReady() { return java.util.Set.copyOf(exchangeSelections.keySet()); }
+    public List<TileType> exchangeSelection(Seat seat) { return exchangeSelections.getOrDefault(seat, List.of()); }
+    public List<TileType> exchangeReceived(Seat seat) { return exchangeReceived.getOrDefault(seat, List.of()); }
+    public Optional<ExchangeDirection> exchangeDirection() { return Optional.ofNullable(exchangeDirection); }
+
+    public void submitExchange(Seat seat, List<TileType> tiles, long expectedRevision) {
+        requireRevision(expectedRevision);
+        requirePhase(RoundPhase.EXCHANGING_TILES);
+        if (exchangeSelections.containsKey(seat)) throw new IllegalStateException("换牌已确认，不能重复提交或修改");
+        if (tiles == null || tiles.size() != 3 || tiles.stream().anyMatch(java.util.Objects::isNull))
+            throw new IllegalArgumentException("请选择恰好三张牌");
+        TileType.Suit suit = tiles.getFirst().suit();
+        if (suit == TileType.Suit.HONOR || tiles.stream().anyMatch(tile -> tile.suit() != suit))
+            throw new IllegalArgumentException("换三张必须选择同一种花色");
+        List<TileType> available = new ArrayList<>(hand(seat));
+        for (TileType tile : tiles) if (!available.remove(tile)) throw new IllegalArgumentException("所选牌张数量超过实际手牌");
+        exchangeSelections.put(seat, List.copyOf(tiles));
+        // 同一选择窗口的四个并发请求共享 revision，直到原子换牌完成。
+        if (exchangeSelections.size() == 4) finishExchange();
+    }
+
+    public List<TileType> recommendedExchange(Seat seat) {
+        List<TileType> all = hand(seat);
+        TileType.Suit suit = List.of(TileType.Suit.MAN, TileType.Suit.PIN, TileType.Suit.SOU).stream()
+                .filter(s -> all.stream().filter(tile -> tile.suit() == s).count() >= 3)
+                .min(java.util.Comparator.comparingLong(s -> all.stream().filter(tile -> tile.suit() == s).count())).orElseThrow();
+        return all.stream().filter(tile -> tile.suit() == suit).sorted().limit(3).toList();
+    }
+
+    public boolean expireExchange(long nowMillis) {
+        if (phase != RoundPhase.EXCHANGING_TILES || nowMillis < exchangeDeadline) return false;
+        for (Seat seat : Seat.values()) exchangeSelections.putIfAbsent(seat, recommendedExchange(seat));
+        finishExchange();
+        return true;
+    }
+
+    private void finishExchange() {
+        exchangeDirection = ExchangeDirection.values()[exchangeRandom.nextInt(3)];
+        // 必须先移除四家换出的牌，再加入收到的牌，不能沿座次传递已收到的牌。
+        for (Seat seat : Seat.values()) {
+            for (TileType tile : exchangeSelections.get(seat)) {
+                if (!hands.get(seat).remove(tile)) drawnTiles.remove(seat);
+            }
+        }
+        for (Seat sender : Seat.values()) {
+            Seat recipient = exchangeDirection.recipient(sender);
+            List<TileType> received = exchangeSelections.get(sender);
+            exchangeReceived.put(recipient, received);
+            hands.get(recipient).addAll(received);
+        }
+        // 庄家第十四张若参与换出，用收到的一张接替独立摸牌位，保持 13+1 的界面约定。
+        if (!drawnTiles.containsKey(Seat.EAST)) {
+            TileType replacement = exchangeReceived.get(Seat.EAST).getLast();
+            hands.get(Seat.EAST).remove(replacement);
+            drawnTiles.put(Seat.EAST, replacement);
+        }
+        sortAllHands();
+        phase = RoundPhase.CHOOSING_MISSING_SUIT;
+        missingSuitDeadline = System.currentTimeMillis() + 10_000;
+        actionStartedAtMillis = System.currentTimeMillis();
+        revision++;
+    }
 
     public void chooseMissingSuit(Seat seat, TileType.Suit suit, long expectedRevision) {
         requireRevision(expectedRevision);
@@ -154,6 +225,10 @@ public final class MahjongRound {
     public EnumSet<PlayerActionType> legalActions(Seat seat) {
         EnumSet<PlayerActionType> actions = EnumSet.noneOf(PlayerActionType.class);
         if (winners.contains(seat) || claimResponses.containsKey(seat)) return actions;
+        if (phase == RoundPhase.EXCHANGING_TILES) {
+            if (!exchangeSelections.containsKey(seat)) actions.add(PlayerActionType.EXCHANGE_THREE);
+            return actions;
+        }
         if (phase == RoundPhase.CHOOSING_MISSING_SUIT) {
             if (!missingSuits.containsKey(seat)) actions.add(PlayerActionType.DING_QUE);
             return actions;

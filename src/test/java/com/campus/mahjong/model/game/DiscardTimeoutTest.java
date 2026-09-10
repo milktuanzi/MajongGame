@@ -9,7 +9,10 @@ import static com.campus.mahjong.model.game.TileType.*;
 class DiscardTimeoutTest {
     private MahjongRound start(ModeCode mode) {
         var round = MahjongRound.start(new FriendRoomSettings(mode, 2, Optional.of(128), 2, false, ""), 42);
-        if (mode == ModeCode.SICHUAN) for (Seat seat : Seat.values()) round.chooseMissingSuit(seat, Suit.MAN, 0);
+        if (mode == ModeCode.SICHUAN) {
+            round.expireExchange(round.exchangeDeadline());
+            for (Seat seat : Seat.values()) round.chooseMissingSuit(seat, Suit.MAN, round.revision());
+        }
         return round;
     }
     @Test void waitsFifteenSecondsThenDiscardsDrawnTileAndRejectsStaleRequest() {
@@ -53,13 +56,13 @@ class DiscardTimeoutTest {
     }
     @Test void timeoutAtWallEndAdvancesMatchAndClearsOldDeadline() throws Exception {
         var match = new MahjongMatch(new FriendRoomSettings(ModeCode.SICHUAN,2,Optional.of(128),2,false,""),42,1);
-        var r=match.round();r.expireMissingSuitSelection(r.missingSuitDeadline());
+        var r=match.round();r.expireExchange(r.exchangeDeadline());r.expireMissingSuitSelection(r.missingSuitDeadline());
         Deque<TileType> wall=BloodBattleTest.field(r,"wall");wall.clear();
         Map<Seat,List<TileType>> hands=BloodBattleTest.field(r,"hands");
         for(Seat s:List.of(Seat.SOUTH,Seat.WEST,Seat.NORTH))hands.get(s).clear();
         assertTrue(match.expireTimedActions(r.actionStartedAtMillis()+15000));
         assertEquals(2,match.roundNumber());
-        assertEquals(RoundPhase.CHOOSING_MISSING_SUIT,match.round().phase());
+        assertEquals(RoundPhase.EXCHANGING_TILES,match.round().phase());
         assertFalse(match.expireTimedActions(System.currentTimeMillis()));
     }
 }

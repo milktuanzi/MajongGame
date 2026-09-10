@@ -61,7 +61,9 @@ public final class InMemoryGameSessionService implements GameSessionService {
             Context context = require(request.gameId());
             synchronized (context) {
                 Seat seat = context.seatOf(request.playerId());
-                context.match.apply(seat, request.type(), request.tiles().isEmpty() ? null : requiredTile(request), request.expectedRevision());
+                if (request.type() == PlayerActionType.EXCHANGE_THREE)
+                    context.match.exchange(seat, request.tiles().stream().map(tile -> TileType.fromDisplayName(tile.code())).toList(), request.expectedRevision());
+                else context.match.apply(seat, request.type(), request.tiles().isEmpty() ? null : requiredTile(request), request.expectedRevision());
                 return CompletableFuture.completedFuture(new ActionResult(true, "操作成功",
                         snapshot(context, request.playerId())));
             }
@@ -120,7 +122,10 @@ public final class InMemoryGameSessionService implements GameSessionService {
                 round.phase() == RoundPhase.WAITING_FOR_CLAIMS, round.actionStartedAtMillis(), round.winners(), context.match.ledger(), round.phase() == RoundPhase.CHOOSING_MISSING_SUIT,
                 round.missingSuitDeadline(), round.phase() == RoundPhase.CHOOSING_MISSING_SUIT
                         ? round.missingSuits().containsKey(viewerSeat) ? Map.of(viewerSeat, round.missingSuits().get(viewerSeat)) : Map.of()
-                        : round.missingSuits(), round.missingSuits().keySet());
+                        : round.missingSuits(), round.missingSuits().keySet(),
+                round.phase() == RoundPhase.EXCHANGING_TILES, round.exchangeDeadline(), round.exchangeReady(),
+                round.exchangeSelection(viewerSeat).stream().map(tile -> new Tile(tile.displayName())).toList(),
+                round.exchangeReceived(viewerSeat).stream().map(tile -> new Tile(tile.displayName())).toList(), round.exchangeDirection());
     }
 
     private List<ActionOption> actionOptions(MahjongRound round, Seat seat) {

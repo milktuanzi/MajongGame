@@ -153,6 +153,15 @@ public final class DemoSession {
     public static int totalRounds() { return Integer.parseInt(rounds.replace("轮", "").trim()); }
     public static int remainingTiles() { return roundEngine == null ? remainingTiles : roundEngine.wallRemaining(); }
     public static boolean choosingMissingSuit() { return roundEngine != null && roundEngine.phase() == RoundPhase.CHOOSING_MISSING_SUIT; }
+    public static boolean exchangingTiles() { return roundEngine != null && roundEngine.phase() == RoundPhase.EXCHANGING_TILES; }
+    public static long exchangeDeadline() { return roundEngine.exchangeDeadline(); }
+    public static java.util.Set<Seat> exchangeReady() { return roundEngine.exchangeReady(); }
+    public static String exchangeSummary() { return roundEngine.exchangeDirection().map(d -> d.label() + "换牌 · 收到 " + roundEngine.exchangeReceived(Seat.EAST).stream().map(TileType::displayName).collect(java.util.stream.Collectors.joining("、")) + " · ").orElse(""); }
+    public static void exchangeTiles(List<String> tiles) {
+        synchronizeProgress();
+        match.exchange(Seat.EAST, tiles.stream().map(TileType::fromDisplayName).toList(), match.revision());
+        synchronizeProgress();
+    }
     public static long missingSuitDeadline() { return roundEngine == null ? 0 : roundEngine.missingSuitDeadline(); }
     public static Map<Seat, TileType.Suit> missingSuits() { return roundEngine == null ? Map.of() : roundEngine.missingSuits(); }
     public static List<String> discardableTiles() { return roundEngine == null ? hand() : roundEngine.discardableTiles(Seat.EAST).stream().map(TileType::displayName).toList(); }
@@ -212,6 +221,7 @@ public final class DemoSession {
     public static String advanceSimulationStep() {
         synchronizeProgress();
         if (roundEngine == null) return "牌局尚未开始";
+        if (exchangingTiles()) return "请选择三张同花色牌交换";
         if (choosingMissingSuit()) return "请选择本轮定缺花色";
         if (roundEngine.phase() == RoundPhase.FINISHED) return finishMessage();
         if (roundEngine.phase() == RoundPhase.WAITING_FOR_CLAIMS) {
@@ -241,7 +251,7 @@ public final class DemoSession {
     }
 
     public static boolean shouldAdvanceSimulation() {
-        return roundEngine != null && !choosingMissingSuit() && roundEngine.phase() != RoundPhase.FINISHED
+        return roundEngine != null && !exchangingTiles() && !choosingMissingSuit() && roundEngine.phase() != RoundPhase.FINISHED
                 && !claimPromptOpen
                 && !(roundEngine.phase() == RoundPhase.WAITING_FOR_DISCARD && roundEngine.currentTurn() == Seat.EAST);
     }
@@ -347,6 +357,12 @@ public final class DemoSession {
         match.expireTimedActions(System.currentTimeMillis());
         match.synchronizeRound();
         roundEngine = match.round();
+        if (exchangingTiles()) {
+            for (Seat seat : List.of(Seat.SOUTH, Seat.WEST, Seat.NORTH)) {
+                if (!roundEngine.exchangeReady().contains(seat))
+                    roundEngine.submitExchange(seat, roundEngine.recommendedExchange(seat), roundEngine.revision());
+            }
+        }
         if (choosingMissingSuit()) {
             for (Seat seat : List.of(Seat.SOUTH, Seat.WEST, Seat.NORTH)) {
                 if (!roundEngine.missingSuits().containsKey(seat))

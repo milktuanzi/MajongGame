@@ -70,6 +70,9 @@ public final class GameController {
     @FXML private FlowPane leftDiscardPane;
     @FXML private FlowPane topDiscardPane;
     @FXML private Button discardButton;
+    @FXML private Button exchangeButton;
+    private final List<String> exchangeSelection = new java.util.ArrayList<>();
+    private final java.util.Map<String, Integer> exchangeRendered = new java.util.HashMap<>();
     @FXML private Button passButton;
     @FXML private Button missingWanButton;
     @FXML private Button missingPinButton;
@@ -134,6 +137,7 @@ public final class GameController {
         gameSubscription = session.observeGame(snapshot -> runOnFx(() -> {
             boolean drewNewTile = networkGame == null || snapshot.revision() != networkGame.revision();
             networkGame = snapshot;
+            if (drewNewTile || !snapshot.exchangingTiles()) exchangeSelection.clear();
             if (showFinalSettlement()) return;
             clearSelection();
             updateNetworkLabels();
@@ -212,6 +216,33 @@ public final class GameController {
     }
 
     private boolean choosingMissingSuit() { return lanSession == null ? DemoSession.choosingMissingSuit() : networkGame.choosingMissingSuit(); }
+    private boolean exchangingTiles() { return lanSession == null ? DemoSession.exchangingTiles() : networkGame.exchangingTiles(); }
+    private java.util.Set<Seat> exchangeReady() { return lanSession == null ? DemoSession.exchangeReady() : networkGame.exchangeReady(); }
+    private String exchangeSummary() {
+        return lanSession == null ? DemoSession.exchangeSummary() : networkGame.exchangeDirection().map(d -> d.label() + "换牌 · 收到 " + networkGame.receivedExchangeTiles().stream().map(Tile::code).collect(java.util.stream.Collectors.joining("、")) + " · ").orElse("");
+    }
+    @FXML private void confirmExchange() {
+        if (exchangeSelection.size() != 3 || !currentActions().contains(PlayerActionType.EXCHANGE_THREE)) return;
+        exchangeButton.setDisable(true);
+        if (lanSession != null) submitNetworkAction(PlayerActionType.EXCHANGE_THREE, exchangeSelection.stream().map(Tile::new).toList());
+        else {
+            try { DemoSession.exchangeTiles(List.copyOf(exchangeSelection)); exchangeSelection.clear(); renderTable(false); }
+            catch (IllegalArgumentException | IllegalStateException error) { renderTable(false); actionTip.setText(error.getMessage()); }
+        }
+    }
+    private void toggleExchange(MahjongTileView view, String tile) {
+        boolean selected = view.getPseudoClassStates().contains(PseudoClass.getPseudoClass("selected"));
+        if (selected) exchangeSelection.remove(tile);
+        else {
+            if (exchangeSelection.size() == 3) { actionTip.setText("已经选好三张，取消一张后可重新选择"); return; }
+            if (!exchangeSelection.isEmpty() && TileType.fromDisplayName(exchangeSelection.getFirst()).suit() != TileType.fromDisplayName(tile).suit()) {
+                actionTip.setText("三张牌必须同花色；更换花色请先取消已选牌"); return;
+            }
+            exchangeSelection.add(tile);
+        }
+        view.setSelectedState(!selected); view.setTranslateY(selected ? 0 : -12);
+        renderActionButtons();
+    }
     private java.util.Map<Seat, TileType.Suit> missingSuits() { return lanSession == null ? DemoSession.missingSuits() : networkGame.missingSuits(); }
     private String suitName(TileType.Suit suit) { return switch(suit) { case MAN -> "万"; case PIN -> "筒"; case SOU -> "条"; default -> ""; }; }
     private boolean canDiscardTile(String name) {
@@ -305,6 +336,7 @@ public final class GameController {
     }
 
     private void renderTable(boolean animateDraw) {
+        exchangeRendered.clear();
         if (lanSession == null) {
             DemoSession.synchronizeProgress();
             roundLabel.setText("第 " + DemoSession.currentRound() + " / " + DemoSession.totalRounds() + " 轮");
@@ -501,6 +533,7 @@ public final class GameController {
             long previousRevision = DemoSession.stateRevision();
             DemoSession.synchronizeProgress();
             if (previousRevision != DemoSession.stateRevision()) {
+                exchangeSelection.clear();
                 clearSelection(); handPane.setMouseTransparent(false); renderTable(false);
                 if (DemoSession.roundFinished()) AppNavigator.settlement();
                 else scheduleSimulationStep();
@@ -521,9 +554,15 @@ public final class GameController {
             turnPhaseLabel.setText("定缺倒计时");
         }
         Label[] indicators = {bottomTurnIndicator, rightTurnIndicator, topTurnIndicator, leftTurnIndicator};
+        if (exchangingTiles()) {
+            long deadline = lanSession == null ? DemoSession.exchangeDeadline() : networkGame.exchangeDeadline();
+            turnTimerLabel.setText(String.format("%02d", Math.max(0, (deadline - System.currentTimeMillis() + 999) / 1000)));
+            turnPhaseLabel.setText("换三张倒计时");
+            turnTimerLabel.pseudoClassStateChanged(PseudoClass.getPseudoClass("urgent"), deadline - System.currentTimeMillis() <= 5000);
+        }
         TableSeatLayout.Position[] positions = TableSeatLayout.Position.values();
         for (int i = 0; i < indicators.length; i++) {
-            boolean active = !choosingMissingSuit() && !finished && !waiting && TableSeatLayout.seatAt(localSeat(), positions[i]) == current;
+            boolean active = !exchangingTiles() && !choosingMissingSuit() && !finished && !waiting && TableSeatLayout.seatAt(localSeat(), positions[i]) == current;
             indicators[i].pseudoClassStateChanged(PseudoClass.getPseudoClass("active"), active);
             indicators[i].setAccessibleText(active ? "当前出牌玩家方向" : "");
         }
@@ -536,11 +575,25 @@ public final class GameController {
         view.setUserData(TileType.fromDisplayName(tileName).suit() == missingSuits().get(localSeat()));
         if (TileType.fromDisplayName(tileName).suit() == missingSuits().get(localSeat())) view.getStyleClass().add("missing-suit-tile");
         view.setOnMouseClicked(event -> selectTile(view, tileName, drawn));
+        if (exchangingTiles()) {
+            view.setDisable(!currentActions().contains(PlayerActionType.EXCHANGE_THREE));
+            int occurrence = exchangeRendered.merge(tileName, 1, Integer::sum);
+            boolean selected = occurrence <= java.util.Collections.frequency(exchangeSelection, tileName);
+            view.setSelectedState(selected); view.setTranslateY(selected ? -12 : 0);
+            view.setOnMouseClicked(event -> toggleExchange(view, tileName));
+        }
         return view;
     }
 
     private void renderActionButtons() {
         EnumSet<PlayerActionType> actions = currentActions();
+        show(exchangeButton, exchangingTiles());
+        exchangeButton.setText(exchangeReady().contains(localSeat()) ? "已确认换牌" : "确认换三张");
+        exchangeButton.setDisable(!actions.contains(PlayerActionType.EXCHANGE_THREE) || exchangeSelection.size() != 3);
+        if (exchangingTiles()) {
+            selectedTileLabel.setText("已选 " + exchangeSelection.size() + " / 3 张");
+            actionTip.setText(exchangeReady().contains(localSeat()) ? "已锁定选牌 · 等待四家同时交换（" + exchangeReady().size() + "/4）" : "换三张：点选 3 张同花色牌 · 超时自动选牌 · 换完再定缺");
+        } else if (selectedTile == null) selectedTileLabel.setText(choosingMissingSuit() ? "换牌完成" : "尚未选牌");
         boolean choose = actions.contains(PlayerActionType.DING_QUE);
         Button[] missingButtons = {missingWanButton, missingPinButton, missingSouButton};
         TileType.Suit[] suits = {TileType.Suit.MAN, TileType.Suit.PIN, TileType.Suit.SOU};
@@ -551,7 +604,7 @@ public final class GameController {
             missingButtons[i].setText("缺" + suitName(suit) + " · " + count + " 张");
             show(missingButtons[i], choose); missingButtons[i].setDisable(false);
         }
-        if (choosingMissingSuit()) actionTip.setText(choose ? "请选择本轮定缺；超时自动选择张数最少的花色" : "已定缺，等待其他玩家确认");
+        if (choosingMissingSuit()) actionTip.setText(exchangeSummary() + (choose ? "请选择定缺，超时自动定缺" : "已定缺，等待其他玩家确认"));
         else if (actions.contains(PlayerActionType.DISCARD) && missingSuits().containsKey(localSeat()))
             actionTip.setText("本轮缺" + suitName(missingSuits().get(localSeat())) + " · 缺门已排在最右侧 · 15 秒内出牌，超时优先打缺门");
         boolean claim = lanSession == null
@@ -621,6 +674,7 @@ public final class GameController {
     }
 
     private void clearSelection() {
+        if (!exchangingTiles()) exchangeSelection.clear();
         selectedTile = null; selectedIsDrawn = false; selectedView = null;
         selectedTileLabel.setText("尚未选牌");
     }
@@ -637,6 +691,7 @@ public final class GameController {
     }
 
     private String missingCaption(Seat seat) {
+        if (exchangingTiles()) return exchangeReady().contains(seat) ? "已选三张" : "换牌中";
         if (choosingMissingSuit() && seat != localSeat()) {
             boolean ready = lanSession == null ? DemoSession.missingSuits().containsKey(seat) : networkGame.missingSuitReady().contains(seat);
             return ready ? "已定缺" : "定缺中";

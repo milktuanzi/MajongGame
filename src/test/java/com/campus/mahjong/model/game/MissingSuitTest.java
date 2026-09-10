@@ -7,37 +7,38 @@ import static org.junit.jupiter.api.Assertions.*;
 import static com.campus.mahjong.model.game.TileType.*;
 
 class MissingSuitTest {
-    private MahjongRound round() { return MahjongRound.start(new FriendRoomSettings(ModeCode.SICHUAN, 2, Optional.of(128), 2, false, ""), 42); }
+    private MahjongRound round() { var r = MahjongRound.start(new FriendRoomSettings(ModeCode.SICHUAN, 2, Optional.of(128), 2, false, ""), 42); r.expireExchange(r.exchangeDeadline()); return r; }
     private void chooseAll(MahjongRound r, TileType.Suit suit) {
-        for (Seat seat : Seat.values()) r.chooseMissingSuit(seat, suit, 0);
+        r.expireExchange(r.exchangeDeadline());
+        for (Seat seat : Seat.values()) r.chooseMissingSuit(seat, suit, r.revision());
     }
     @Test void concurrentChoicesLockAndStartDealerOnlyAfterEveryoneIsReady() {
         var r = round();
         assertEquals(14, r.hand(Seat.EAST).size());
         assertEquals(Set.of(PlayerActionType.DING_QUE), r.legalActions(Seat.EAST));
-        assertThrows(IllegalStateException.class, () -> r.discard(Seat.EAST, r.hand(Seat.EAST).getFirst(), 0));
-        assertThrows(IllegalArgumentException.class, () -> r.chooseMissingSuit(Seat.EAST, Suit.HONOR, 0));
-        r.chooseMissingSuit(Seat.EAST, Suit.MAN, 0);
+        assertThrows(IllegalStateException.class, () -> r.discard(Seat.EAST, r.hand(Seat.EAST).getFirst(), r.revision()));
+        assertThrows(IllegalArgumentException.class, () -> r.chooseMissingSuit(Seat.EAST, Suit.HONOR, r.revision()));
+        r.chooseMissingSuit(Seat.EAST, Suit.MAN, r.revision());
         assertTrue(r.legalActions(Seat.EAST).isEmpty());
-        assertThrows(IllegalStateException.class, () -> r.chooseMissingSuit(Seat.EAST, Suit.PIN, 0));
-        for (Seat seat : List.of(Seat.SOUTH, Seat.WEST)) r.chooseMissingSuit(seat, Suit.PIN, 0);
+        assertThrows(IllegalStateException.class, () -> r.chooseMissingSuit(Seat.EAST, Suit.PIN, r.revision()));
+        for (Seat seat : List.of(Seat.SOUTH, Seat.WEST)) r.chooseMissingSuit(seat, Suit.PIN, r.revision());
         assertEquals(RoundPhase.CHOOSING_MISSING_SUIT, r.phase());
-        r.chooseMissingSuit(Seat.NORTH, Suit.SOU, 0);
+        r.chooseMissingSuit(Seat.NORTH, Suit.SOU, r.revision());
         assertEquals(RoundPhase.WAITING_FOR_DISCARD, r.phase());
-        assertEquals(1, r.revision());
+        assertEquals(2, r.revision());
         assertEquals(Seat.EAST, r.currentTurn());
     }
     @Test void deadlinePreservesChoicesAndFillsLeastPopulatedSuitExactlyOnce() {
         var r = round();
         var recommended = new EnumMap<Seat, Suit>(Seat.class);
         for (Seat s : Seat.values()) recommended.put(s, r.recommendedMissingSuit(s));
-        r.chooseMissingSuit(Seat.EAST, Suit.SOU, 0);
+        r.chooseMissingSuit(Seat.EAST, Suit.SOU, r.revision());
         assertFalse(r.expireMissingSuitSelection(r.missingSuitDeadline() - 1));
         assertTrue(r.expireMissingSuitSelection(r.missingSuitDeadline()));
         assertEquals(Suit.SOU, r.missingSuits().get(Seat.EAST));
         for (Seat s : List.of(Seat.SOUTH, Seat.WEST, Seat.NORTH)) assertEquals(recommended.get(s), r.missingSuits().get(s));
         assertFalse(r.expireMissingSuitSelection(Long.MAX_VALUE));
-        assertEquals(1, r.revision());
+        assertEquals(2, r.revision());
     }
     @Test void heldOrNewlyDrawnMissingTilesMustBeDiscardedFirst() throws Exception {
         var r = round(); chooseAll(r, Suit.MAN);
@@ -76,7 +77,7 @@ class MissingSuitTest {
         }
         match.synchronizeRound();
         assertEquals(2, match.roundNumber());
-        assertEquals(RoundPhase.CHOOSING_MISSING_SUIT, match.round().phase());
+        assertEquals(RoundPhase.EXCHANGING_TILES, match.round().phase());
         assertTrue(match.round().missingSuits().isEmpty());
     }
 }

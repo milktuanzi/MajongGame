@@ -118,6 +118,36 @@ class LanConnectivityTest {
             waitUntil(() -> allReady(host.currentRoom().orElseThrow()));
             await(host.start(host.currentRoom().orElseThrow().roomId(), host.localPlayer().id()));
             waitUntil(() -> sessions.stream().allMatch(s -> s.currentGame().isPresent()));
+            assertTrue(sessions.stream().allMatch(s -> s.currentGame().orElseThrow().exchangingTiles()));
+            assertFalse(await(host.perform(PlayerActionType.DING_QUE, List.of(new Tile("一万")))).accepted());
+            var selections = new java.util.EnumMap<Seat, List<Tile>>(Seat.class);
+            for (int i = 0; i < sessions.size(); i++) {
+                var session = sessions.get(i);
+                var initial = session.currentGame().orElseThrow();
+                var all = java.util.stream.Stream.concat(initial.ownHand().stream(), initial.drawnTile().stream()).toList();
+                var suitGroups = all.stream().collect(java.util.stream.Collectors.groupingBy(t -> com.campus.mahjong.model.game.TileType.fromDisplayName(t.code()).suit()));
+                var selection = suitGroups.values().stream().filter(g -> g.size() >= 3).findFirst().orElseThrow().subList(0, 3);
+                selections.put(Seat.values()[i], List.copyOf(selection));
+                assertTrue(await(session.perform(PlayerActionType.EXCHANGE_THREE, selection)).accepted());
+                if (i == 0) {
+                    waitUntil(() -> sessions.stream().allMatch(s -> s.currentGame().orElseThrow().exchangeReady().contains(Seat.EAST)));
+                    assertEquals(initial.ownHand(), host.currentGame().orElseThrow().ownHand());
+                    assertEquals(selection, host.currentGame().orElseThrow().ownExchangeSelection());
+                    for (var guest : sessions.subList(1, 4)) {
+                        assertTrue(guest.currentGame().orElseThrow().ownExchangeSelection().isEmpty());
+                        assertTrue(guest.currentGame().orElseThrow().receivedExchangeTiles().isEmpty());
+                        assertTrue(guest.currentGame().orElseThrow().exchangeDirection().isEmpty());
+                    }
+                    assertFalse(await(host.perform(PlayerActionType.EXCHANGE_THREE, selection)).accepted());
+                }
+            }
+            waitUntil(() -> sessions.stream().allMatch(s -> s.currentGame().orElseThrow().choosingMissingSuit()));
+            var direction = host.currentGame().orElseThrow().exchangeDirection().orElseThrow();
+            for (Seat sender : Seat.values()) {
+                var receiver = sessions.get(direction.recipient(sender).ordinal()).currentGame().orElseThrow();
+                assertEquals(selections.get(sender), receiver.receivedExchangeTiles());
+                assertEquals(direction, receiver.exchangeDirection().orElseThrow());
+            }
             long deadline = host.currentGame().orElseThrow().missingSuitDeadline();
             assertTrue(deadline > System.currentTimeMillis());
             assertTrue(sessions.stream().allMatch(s -> s.currentGame().orElseThrow().choosingMissingSuit()));

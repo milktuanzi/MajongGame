@@ -33,7 +33,7 @@ public final class MahjongMatch {
 
     public boolean expireTimedActions(long nowMillis) {
         if (finished) return false;
-        boolean changed = round.expireMissingSuitSelection(nowMillis) || round.expireDiscard(nowMillis);
+        boolean changed = round.expireExchange(nowMillis) || round.expireMissingSuitSelection(nowMillis) || round.expireDiscard(nowMillis);
         if (changed) synchronizeRound();
         return changed;
     }
@@ -58,6 +58,11 @@ public final class MahjongMatch {
             default -> throw new IllegalArgumentException("不支持的操作：" + action);
         }
         synchronizeRound();
+    }
+
+    public void exchange(Seat seat, List<TileType> tiles, long expectedRevision) {
+        if (finished || expectedRevision != revision()) throw new IllegalStateException("牌局状态已更新，请刷新后重试");
+        round.submitExchange(seat, tiles, round.revision());
     }
 
     /** 本地演示也通过同一入口累计流水与推进轮次。 */
