@@ -31,6 +31,13 @@ public final class MahjongMatch {
     public List<ScoreEntry> ledger() { return List.copyOf(ledger); }
     public Map<Seat, Long> scores() { return Map.copyOf(scores); }
 
+    public boolean expireTimedActions(long nowMillis) {
+        if (finished) return false;
+        boolean changed = round.expireMissingSuitSelection(nowMillis) || round.expireDiscard(nowMillis);
+        if (changed) synchronizeRound();
+        return changed;
+    }
+
     public void apply(Seat seat, PlayerActionType action, TileType tile, long expectedRevision) {
         if (finished) throw new IllegalStateException("所有轮次已结束");
         if (expectedRevision != revision()) throw new IllegalStateException("牌局状态已更新，请刷新后重试");

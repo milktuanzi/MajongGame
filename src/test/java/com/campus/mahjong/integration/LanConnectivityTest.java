@@ -136,7 +136,16 @@ class LanConnectivityTest {
             assertTrue(sessions.stream().allMatch(s -> s.currentGame().orElseThrow().missingSuits().equals(result.missingSuits())));
             var allowed = result.availableActions().stream().filter(a -> a.type() == PlayerActionType.DISCARD).findFirst().orElseThrow().relatedTiles();
             assertFalse(allowed.isEmpty());
-            assertTrue(await(host.perform(PlayerActionType.DISCARD, List.of(allowed.getFirst()))).accepted());
+            Tile expected = result.drawnTile().filter(allowed::contains).orElse(allowed.getLast());
+            long discardDeadline = result.actionStartedAtMillis() + 15000;
+            long waitDeadline = System.nanoTime() + Duration.ofSeconds(18).toNanos();
+            while (host.currentGame().orElseThrow().revision() == result.revision() && System.nanoTime() < waitDeadline) Thread.sleep(20);
+            assertTrue(System.currentTimeMillis() >= discardDeadline);
+            waitUntil(() -> sessions.stream().allMatch(s -> s.currentGame().orElseThrow().revision() > result.revision()));
+            for (LanSession session : sessions) {
+                var east = session.currentGame().orElseThrow().players().stream().filter(p -> p.seat() == Seat.EAST).findFirst().orElseThrow();
+                assertEquals(List.of(expected), east.discards());
+            }
         } finally { sessions.reversed().forEach(LanSession::close); }
     }
 

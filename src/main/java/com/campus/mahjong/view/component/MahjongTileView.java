@@ -26,8 +26,8 @@ public final class MahjongTileView extends StackPane {
         this.tile = tile;
         getStyleClass().addAll("mahjong-tile", compact ? "tile-compact" : "tile-hand");
         setAlignment(Pos.TOP_CENTER);
-        double width = compact ? 32 : 58, height = compact ? 44 : 82;
-        double faceWidth = compact ? 29 : 54, faceHeight = compact ? 40 : 75;
+        double width = compact ? 32 : 64, height = compact ? 44 : 88;
+        double faceWidth = compact ? 29 : 60, faceHeight = compact ? 40 : 82;
         setMinSize(width, height); setPrefSize(width, height); setMaxSize(width, height);
         Rectangle depth = rounded(faceWidth, faceHeight);
         depth.getStyleClass().add("tile-depth"); depth.setTranslateY(compact ? 3 : 5);

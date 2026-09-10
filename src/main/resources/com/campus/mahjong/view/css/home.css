@@ -229,3 +229,28 @@
 .missing-pin { -fx-text-fill: #334f87; }
 .missing-sou { -fx-text-fill: #23734f; }
 .missing-choice:hover, .missing-choice:focused { -fx-background-color: #f5e8c8; -fx-border-color: #bd914a; }
+
+/* 清昼雅集：山水庭院、木框云纹桌面与白瓷麻将。 */
+.game-root { -fx-background-color: #e3f1ed; -fx-background-image: url("../images/table/garden-background.png"); -fx-background-size: cover; -fx-background-position: center; }
+.game-top { -fx-padding: 8 24; -fx-background-color: rgba(248,253,250,.96); -fx-border-color: transparent transparent #c7d9ce transparent; }
+.game-round { -fx-text-fill: #234f43; -fx-font-size: 18; }
+.game-meta { -fx-text-fill: #4d6b60; -fx-font-size: 12; }
+.score-chip { -fx-background-color: #f4e4ba; -fx-text-fill: #684816; }
+.wall-chip { -fx-background-color: #d9eee1; -fx-text-fill: #225b43; }
+.game-top .ghost-button, .motion-toggle { -fx-text-fill: #315c4a; }
+.overhead-table { -fx-background-color: #539579; -fx-background-insets: 0; -fx-background-radius: 12; -fx-background-image: url("../images/table/jade-table.png"); -fx-background-size: 100% 100%; -fx-background-repeat: no-repeat; -fx-background-position: center; }
+.table-playing-field { -fx-border-color: rgba(217,239,216,.3); -fx-border-radius: 18; }
+.player-info { -fx-background-color: rgba(249,253,244,.70); -fx-background-radius: 12; -fx-padding: 7 10; -fx-border-color: rgba(177,201,174,.65); -fx-border-radius: 12; }
+.player-info-name { -fx-font-size: 15; -fx-font-weight: bold; -fx-text-fill: #244e3c; }
+.player-info-missing { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #854518; -fx-background-color: #f4e6c6; -fx-background-radius: 5; -fx-padding: 4 5; }
+.player-info-score { -fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #176642; }
+.player-info-score:negative { -fx-text-fill: #9c3b32; }
+.local-table-dock { -fx-padding: 0 10 5; -fx-background-color: transparent; }
+.local-table-dock .turn-tip { -fx-background-color: #f5faed; -fx-background-radius: 6; -fx-text-fill: #315740; -fx-font-size: 12; -fx-padding: 4 8; }
+.local-table-dock .selected-tile-label { -fx-text-fill: #244d3b; -fx-background-color: #f5faed; -fx-background-radius: 6; -fx-padding: 4 8; }
+.turn-clock { -fx-background-color: #f2f4db; -fx-border-color: #bc964f; }
+.turn-clock-time { -fx-text-fill: #2c6048; }
+.turn-clock-caption { -fx-text-fill: #456846; }
+.turn-pointer { -fx-text-fill: #70aa86; }
+.turn-pointer:active { -fx-text-fill: #ffe695; -fx-effect: dropshadow(gaussian, #93632c, 5, .3, 0, 0); }
+.turn-clock-time:urgent { -fx-text-fill: #ae382c; }

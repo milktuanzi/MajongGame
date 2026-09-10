@@ -15,6 +15,7 @@ import com.campus.mahjong.model.game.Meld;
 import com.campus.mahjong.model.session.DemoSession;
 import com.campus.mahjong.view.component.MahjongTileView;
 import com.campus.mahjong.view.component.TableSeatLayout;
+import com.campus.mahjong.view.component.PlayerInfoView;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -48,13 +49,15 @@ public final class GameController {
     @FXML private Label roundLabel;
     @FXML private Label roomLabel;
     @FXML private Label wallLabel;
-    @FXML private Label playerLabel;
+    @FXML private PlayerInfoView playerLabel;
     @FXML private Label scoreLabel;
     @FXML private Label actionTip;
     @FXML private Label selectedTileLabel;
-    @FXML private Label topPlayerLabel;
-    @FXML private Label leftPlayerLabel;
-    @FXML private Label rightPlayerLabel;
+    @FXML private PlayerInfoView topPlayerLabel;
+    @FXML private PlayerInfoView leftPlayerLabel;
+    @FXML private PlayerInfoView rightPlayerLabel;
+    @FXML private Pane playerOverlay;
+    @FXML private VBox localDock;
     @FXML private HBox handPane;
     @FXML private StackPane tableViewport;
     @FXML private Pane tableBoard;
@@ -117,7 +120,7 @@ public final class GameController {
         roomLabel.setText("房间 " + DemoSession.roomCode + " · 四川麻将（本地模拟）");
         renderPlayerPositions();
         scoreLabel.setText("本房积分 " + signed(DemoSession.roomScores().getOrDefault(DemoSession.nickname, 0L)));
-        actionTip.setText("轮到你出牌；本轮摸到的牌位于最右侧");
+        actionTip.setText("请在 15 秒内出牌；缺门牌排在最右侧，新摸牌以间隔区分");
         renderTable(true);
     }
 
@@ -142,7 +145,7 @@ public final class GameController {
     private void updateNetworkLabels() {
         int totalRounds = lanSession.currentRoom().orElseThrow().settings().orElseThrow().rounds();
         roundLabel.setText("第 " + networkGame.currentRound() + " / " + totalRounds + " 轮");
-        roomLabel.setText("热点房间 " + lanSession.invitation() + " · 服务端权威同步");
+        roomLabel.setText("好友房 · " + lanSession.invitation().substring(lanSession.invitation().lastIndexOf('#') + 1));
         long score = localPublicState().map(PlayerPublicState::score).orElse(0L);
         scoreLabel.setText("本房积分 " + signed(score));
         EnumSet<PlayerActionType> actions = currentActions();
@@ -151,7 +154,7 @@ public final class GameController {
         } else if (networkGame.winners().contains(localSeat())) {
             actionTip.setText("你已胡牌，正在观看其余玩家继续；本轮结束后自动进入下一轮");
         } else if (actions.contains(PlayerActionType.DISCARD)) {
-            actionTip.setText("轮到你出牌；操作将提交给房主服务器校验");
+            actionTip.setText("请在 15 秒内出牌；超时自动出牌，优先打缺门");
         } else if (actions.contains(PlayerActionType.PASS)) {
             actionTip.setText("请响应上一张弃牌");
         } else {
@@ -329,6 +332,7 @@ public final class GameController {
         drawnTile.ifPresent(tileName -> {
             Region gap = new Region();
             gap.setMinWidth(22); gap.setPrefWidth(22);
+            gap.setUserData(TileType.fromDisplayName(tileName).suit() == missingSuits().get(localSeat()));
             handPane.getChildren().add(gap);
             MahjongTileView drawn = createHandTile(tileName, true, canDiscard);
             handPane.getChildren().add(drawn);
@@ -337,6 +341,11 @@ public final class GameController {
             if (animateDraw && !key.equals(lastDrawKey) && !reducedMotion.isSelected()) animateDraw(drawn);
             lastDrawKey = key;
         });
+
+        // 稳定排序也涵盖新摸的牌及其间隔，确保缺门始终在整副手牌最右侧。
+        List<Node> sortedTiles = handPane.getChildren().stream()
+                .sorted(java.util.Comparator.comparing(node -> Boolean.TRUE.equals(node.getUserData()))).toList();
+        handPane.getChildren().setAll(sortedTiles);
 
         if (drawnTile.isEmpty()) lastDrawKey = "";
         Seat localSeat = localSeat();
@@ -347,14 +356,26 @@ public final class GameController {
         wallLabel.setText("牌墙剩余 " + (lanSession == null
                 ? DemoSession.remainingTiles() : networkGame.wallRemaining()) + " 张");
         renderActionButtons();
+        Platform.runLater(this::fitTable);
     }
 
     private void renderPlayerPositions() {
         Seat localSeat = localSeat();
-        playerLabel.setText(playerCaption(localSeat));
-        rightPlayerLabel.setText(playerCaption(TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.RIGHT)));
-        topPlayerLabel.setText(playerCaption(TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.TOP)));
-        leftPlayerLabel.setText(playerCaption(TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.LEFT)));
+        updatePlayerInfo(playerLabel, localSeat);
+        updatePlayerInfo(rightPlayerLabel, TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.RIGHT));
+        updatePlayerInfo(topPlayerLabel, TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.TOP));
+        updatePlayerInfo(leftPlayerLabel, TableSeatLayout.seatAt(localSeat, TableSeatLayout.Position.LEFT));
+    }
+
+    private void updatePlayerInfo(PlayerInfoView view, Seat seat) {
+        long points = lanSession == null ? DemoSession.roomScores().getOrDefault(DemoSession.playerName(seat), 0L)
+                : networkGame.players().stream().filter(p -> p.seat() == seat).mapToLong(PlayerPublicState::score).findFirst().orElse(0);
+        int round = lanSession == null ? DemoSession.currentRound() : networkGame.currentRound();
+        var ledger = lanSession == null ? DemoSession.ledger() : networkGame.ledger();
+        String win = ledger.stream().filter(entry -> entry.round() == round && entry.payee().filter(seat::equals).isPresent())
+                .map(com.campus.mahjong.model.game.ScoreEntry::reason).filter(reason -> reason.equals("自摸") || reason.equals("点炮"))
+                .findFirst().orElse("");
+        view.update(playerCaption(seat), missingCaption(seat), points, win);
     }
 
     private void renderSeatDiscards(FlowPane pane, Seat seat) {
@@ -368,23 +389,44 @@ public final class GameController {
             MahjongTileView tile = new MahjongTileView(TileType.fromDisplayName(tileName), true);
             tile.setMouseTransparent(true);
             tile.getStyleClass().add("discarded-tile");
-            tile.setScaleX(.78);
-            tile.setScaleY(.78);
+            tile.setScaleX(.94);
+            tile.setScaleY(.94);
             pane.getChildren().add(tile);
             if (!reducedMotion.isSelected() && previousCount != null && discards.size() > previousCount
                     && pane.getChildren().size() == discards.size()) {
                 ScaleTransition settle = new ScaleTransition(Duration.millis(170), tile);
-                settle.setFromX(.94); settle.setFromY(.94); settle.setToX(.78); settle.setToY(.78);
+                settle.setFromX(1.08); settle.setFromY(1.08); settle.setToX(.94); settle.setToY(.94);
                 settle.setInterpolator(Interpolator.EASE_OUT); settle.play();
             }
         });
     }
 
     private void fitTable() {
-        double scale = Math.min(tableViewport.getWidth() / 1000, tableViewport.getHeight() / 1000);
+        double width = tableViewport.getWidth(), height = tableViewport.getHeight();
+        // 为左右玩家信息保留桌外空间，窄而高的窗口也不压进桌面。
+        double scale = Math.min((width - 400) / 1000, (height - 8) / 1000);
         if (scale <= 0) return;
         tableBoard.setScaleX(scale);
         tableBoard.setScaleY(scale);
+        double sideScale = Math.min(1, ((width - 1000 * scale) / 2 - 16) / 300);
+        double rightX = width - 8 - 300 * sideScale;
+        placeSideInfo(topPlayerLabel, rightX, Math.max(18, height * .12), sideScale);
+        placeSideInfo(leftPlayerLabel, 8, height * .32, sideScale);
+        placeSideInfo(rightPlayerLabel, rightX, height * .42, sideScale);
+        placeSideInfo(playerLabel, 8, Math.max(height * .52, height - 240), sideScale);
+        // 手牌只在窄窗口缩放，独立于正方形牌桌的缩放比例。
+        double handScale = Math.min(1, (width - 72) / 1140);
+        localDock.setScaleX(handScale); localDock.setScaleY(handScale);
+        double tableTop = (height - 1000 * scale) / 2;
+        double dockTop = localDock.getHeight() > 0 ? localDock.getBoundsInParent().getMinY() : height - 164;
+        if (actionTip.getScene() != null && actionTip.getHeight() > 0)
+            dockTop = tableViewport.sceneToLocal(actionTip.localToScene(actionTip.getLayoutBounds())).getMinY();
+        bottomMeldPane.setLayoutY(Math.min(910, (dockTop - 14 - tableTop) / scale - 44));
+    }
+
+    private void placeSideInfo(PlayerInfoView view, double x, double y, double scale) {
+        view.setScaleX(scale); view.setScaleY(scale);
+        view.relocate(x - 150 * (1 - scale), y - 37 * (1 - scale));
     }
 
     private void renderMelds() {
@@ -437,8 +479,8 @@ public final class GameController {
             tiles.getChildren().add(tile);
         }
         // Group 使用缩放后的边界参加父布局，四组杠牌也可保持单排。
-        tiles.setScaleX(.64);
-        tiles.setScaleY(.64);
+        tiles.setScaleX(.94);
+        tiles.setScaleY(.94);
         pane.getChildren().add(new Group(tiles));
     }
 
@@ -455,18 +497,24 @@ public final class GameController {
     }
 
     private void updateTurnClock() {
-        boolean wasChoosing = choosingMissingSuit();
         if (lanSession == null) {
+            long previousRevision = DemoSession.stateRevision();
             DemoSession.synchronizeProgress();
-            if (wasChoosing && !choosingMissingSuit()) { renderTable(false); return; }
+            if (previousRevision != DemoSession.stateRevision()) {
+                clearSelection(); handPane.setMouseTransparent(false); renderTable(false);
+                if (DemoSession.roundFinished()) AppNavigator.settlement();
+                else scheduleSimulationStep();
+                return;
+            }
         }
         boolean finished = lanSession == null ? DemoSession.roundFinished() : networkGame.status() == GameStatus.FINISHED;
         boolean waiting = lanSession == null ? DemoSession.waitingForClaims() : networkGame.waitingForClaims();
         long started = lanSession == null ? DemoSession.actionStartedAtMillis() : networkGame.actionStartedAtMillis();
         Seat current = lanSession == null ? DemoSession.currentTurnSeat() : networkGame.currentTurn();
-        long elapsed = started == 0 || finished ? 0 : Math.max(0, (System.currentTimeMillis() - started) / 1000);
-        turnTimerLabel.setText(finished ? "—" : String.format("%02d:%02d", elapsed / 60, elapsed % 60));
-        turnPhaseLabel.setText(finished ? "本局结束" : waiting ? "等待响应" : "出牌用时");
+        long remaining = Math.max(0, Math.min(15, (started + com.campus.mahjong.model.game.MahjongRound.DISCARD_TIMEOUT_MILLIS - System.currentTimeMillis() + 999) / 1000));
+        turnTimerLabel.setText(finished || waiting ? "—" : String.format("%02d", remaining));
+        turnPhaseLabel.setText(finished ? "本局结束" : waiting ? "等待响应" : "出牌倒计时");
+        turnTimerLabel.pseudoClassStateChanged(PseudoClass.getPseudoClass("urgent"), !finished && !waiting && !choosingMissingSuit() && remaining <= 5);
         if (choosingMissingSuit()) {
             long deadline = lanSession == null ? DemoSession.missingSuitDeadline() : networkGame.missingSuitDeadline();
             turnTimerLabel.setText(String.format("%02d", Math.max(0, (deadline - System.currentTimeMillis() + 999) / 1000)));
@@ -485,6 +533,7 @@ public final class GameController {
         MahjongTileView view = new MahjongTileView(TileType.fromDisplayName(tileName), false);
         view.setDrawn(drawn);
         view.setDisable(!canDiscard || !canDiscardTile(tileName));
+        view.setUserData(TileType.fromDisplayName(tileName).suit() == missingSuits().get(localSeat()));
         if (TileType.fromDisplayName(tileName).suit() == missingSuits().get(localSeat())) view.getStyleClass().add("missing-suit-tile");
         view.setOnMouseClicked(event -> selectTile(view, tileName, drawn));
         return view;
@@ -504,7 +553,7 @@ public final class GameController {
         }
         if (choosingMissingSuit()) actionTip.setText(choose ? "请选择本轮定缺；超时自动选择张数最少的花色" : "已定缺，等待其他玩家确认");
         else if (actions.contains(PlayerActionType.DISCARD) && missingSuits().containsKey(localSeat()))
-            actionTip.setText("本轮缺" + suitName(missingSuits().get(localSeat())) + "，有缺门牌时必须先打出缺门牌");
+            actionTip.setText("本轮缺" + suitName(missingSuits().get(localSeat())) + " · 缺门已排在最右侧 · 15 秒内出牌，超时优先打缺门");
         boolean claim = lanSession == null
                 ? DemoSession.isAwaitingLocalClaim() : actions.contains(PlayerActionType.PASS);
         show(passButton, claim);
@@ -548,9 +597,9 @@ public final class GameController {
     }
 
     private void animateDraw(MahjongTileView tile) {
-        tile.setOpacity(0); tile.setTranslateX(38);
+        tile.setOpacity(0); tile.setTranslateY(12);
         FadeTransition fade = new FadeTransition(Duration.millis(240), tile); fade.setToValue(1);
-        TranslateTransition slide = new TranslateTransition(Duration.millis(240), tile); slide.setToX(0); slide.setInterpolator(Interpolator.EASE_OUT);
+        TranslateTransition slide = new TranslateTransition(Duration.millis(240), tile); slide.setToY(0); slide.setInterpolator(Interpolator.EASE_OUT);
         new ParallelTransition(fade, slide).play();
     }
 
@@ -579,22 +628,21 @@ public final class GameController {
     private void show(Node node, boolean visible) { node.setVisible(visible); node.setManaged(visible); }
     private String signed(long score) { return score > 0 ? "+" + score : String.valueOf(score); }
     private String playerCaption(Seat seat) {
-        if (lanSession == null) return DemoSession.playerName(seat) + missingCaption(seat) + " · " + seatName(seat)
-                + (DemoSession.winners().contains(seat) ? " · 已胡" : "");
+        if (lanSession == null) return DemoSession.playerName(seat) + " · " + seatName(seat);
         String name = lanSession.currentRoom().orElseThrow().players().stream()
                 .filter(player -> player.seat() == seat).map(RoomPlayer::profile)
                 .map(profile -> profile.nickname() + (profile.id().equals(lanSession.localPlayer().id()) ? "（我）" : ""))
                 .findFirst().orElse("等待玩家");
-        return name + missingCaption(seat) + " · " + seatName(seat) + (networkGame.winners().contains(seat) ? " · 已胡" : "");
+        return name + " · " + seatName(seat);
     }
 
     private String missingCaption(Seat seat) {
         if (choosingMissingSuit() && seat != localSeat()) {
             boolean ready = lanSession == null ? DemoSession.missingSuits().containsKey(seat) : networkGame.missingSuitReady().contains(seat);
-            return ready ? " · 已定缺" : " · 定缺中";
+            return ready ? "已定缺" : "定缺中";
         }
         TileType.Suit missing = missingSuits().get(seat);
-        return missing == null ? "" : " · 缺" + suitName(missing);
+        return missing == null ? "" : "缺" + suitName(missing);
     }
 
     private EnumSet<PlayerActionType> currentActions() {

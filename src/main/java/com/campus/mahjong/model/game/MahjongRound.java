@@ -23,6 +23,7 @@ import java.util.Random;
  * 因而可安全地放在网络房主端串行执行。
  */
 public final class MahjongRound {
+    public static final long DISCARD_TIMEOUT_MILLIS = 15_000;
     private final FriendRoomSettings settings;
     private final SettlementCalculator settlementCalculator = new SettlementCalculator();
     private final RegionalRuleSet regionalRule;
@@ -110,6 +111,17 @@ public final class MahjongRound {
         return all.stream().filter(tile -> !mustDiscardMissing || isMissingTile(seat, tile)).distinct().toList();
     }
 
+    /** 只有出牌阶段使用此时限；碰杠胡响应窗口不会被当作出牌超时。 */
+    public boolean expireDiscard(long nowMillis) {
+        if (phase != RoundPhase.WAITING_FOR_DISCARD || nowMillis < actionStartedAtMillis + DISCARD_TIMEOUT_MILLIS) return false;
+        List<TileType> allowed = discardableTiles(currentTurn);
+        if (allowed.isEmpty()) return false;
+        TileType drawn = drawnTiles.get(currentTurn);
+        TileType choice = allowed.contains(drawn) ? drawn : allowed.getLast();
+        discard(currentTurn, choice, drawn == choice, revision);
+        return true;
+    }
+
     private boolean canWin(Seat seat, List<TileType> tiles) {
         return tiles.stream().noneMatch(tile -> isMissingTile(seat, tile))
                 && melds.get(seat).stream().flatMap(meld -> meld.tiles().stream()).noneMatch(tile -> isMissingTile(seat, tile))
@@ -131,7 +143,10 @@ public final class MahjongRound {
         Optional.ofNullable(drawnTiles.get(seat)).ifPresent(result::add);
         return List.copyOf(result);
     }
-    public List<TileType> organizedHand(Seat seat) { return List.copyOf(hands.get(seat)); }
+    public List<TileType> organizedHand(Seat seat) {
+        return hands.get(seat).stream().sorted(java.util.Comparator
+                .comparing((TileType tile) -> isMissingTile(seat, tile)).thenComparing(Enum::ordinal)).toList();
+    }
     public Optional<TileType> drawnTile(Seat seat) { return Optional.ofNullable(drawnTiles.get(seat)); }
     public List<TileType> discards(Seat seat) { return List.copyOf(discards.get(seat)); }
     public List<Meld> melds(Seat seat) { return List.copyOf(melds.get(seat)); }

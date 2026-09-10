@@ -340,8 +340,11 @@ public final class DemoSession {
         return match == null ? java.util.List.of() : match.ledger();
     }
 
+    public static long stateRevision() { return match == null ? 0 : match.revision(); }
+
     public static void synchronizeProgress() {
         if (match == null) return;
+        match.expireTimedActions(System.currentTimeMillis());
         match.synchronizeRound();
         roundEngine = match.round();
         if (choosingMissingSuit()) {

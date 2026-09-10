@@ -133,9 +133,9 @@ public final class InMemoryGameSessionService implements GameSessionService {
         }).toList();
     }
 
-    public boolean expireMissingSuit(GameId gameId) {
+    public boolean expireTimedActions(GameId gameId) {
         Context context = require(gameId);
-        synchronized (context) { return context.match.round().expireMissingSuitSelection(System.currentTimeMillis()); }
+        synchronized (context) { return context.match.expireTimedActions(System.currentTimeMillis()); }
     }
 
     private synchronized Context require(GameId gameId) {
