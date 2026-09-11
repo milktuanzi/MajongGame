@@ -69,7 +69,8 @@ public final class MahjongRound {
         }
         sortAllHands();
         drawnTiles.put(Seat.EAST, wall.removeFirst());
-        if (settings.mode() == com.campus.mahjong.model.common.MahjongTypes.ModeCode.SICHUAN) {
+        if (settings.mode() == com.campus.mahjong.model.common.MahjongTypes.ModeCode.SICHUAN
+                || settings.mode() == com.campus.mahjong.model.common.MahjongTypes.ModeCode.RED_CENTER) {
             phase = RoundPhase.EXCHANGING_TILES;
             exchangeDeadline = System.currentTimeMillis() + EXCHANGE_TIMEOUT_MILLIS;
         }
@@ -244,7 +245,6 @@ public final class MahjongRound {
             int count = count(seat, lastDiscard);
             if (count >= 2) actions.add(PlayerActionType.PENG);
             if (count >= 3) actions.add(PlayerActionType.GANG);
-            if (regionalRule.allowChi() && seat == nextSeat(lastDiscarder) && findChiTiles(seat).isPresent()) actions.add(PlayerActionType.CHI);
             if (!actions.isEmpty()) actions.add(PlayerActionType.PASS);
         }
         return actions;
@@ -277,7 +277,7 @@ public final class MahjongRound {
         phase = RoundPhase.WAITING_FOR_CLAIMS;
         revision++;
         actionStartedAtMillis = System.currentTimeMillis();
-        // 无合法吃碰杠胡的座位自动过，不要求客户端发送无意义的响应。
+        // 无合法碰杠胡的座位自动过，不要求客户端发送无意义的响应。
         for (Seat other : Seat.values()) {
             if (other != lastDiscarder && legalActions(other).isEmpty()) {
                 claimResponses.put(other, PlayerActionType.PASS);
@@ -366,23 +366,22 @@ public final class MahjongRound {
     }
 
     private void resolveClaims() {
-        boolean won = false;
+        Seat lastWinner = null;
         for (int distance = 1; distance <= 3; distance++) {
             Seat seat = advance(lastDiscarder, distance);
             if (claimResponses.get(seat) == PlayerActionType.HU) {
                 var analysis = regionalRule.analyze(withLastDiscard(seat), melds.get(seat));
                 recordWin(seat, lastDiscarder, false, analysis.patterns(), analysis.fan());
-                won = true;
+                lastWinner = seat;
             }
         }
-        if (won) { continueAfterWin(lastDiscarder); return; }
+        // 点炮胡后由胡牌玩家的下一家继续；一炮多响时以座次处理的最后一位胡牌者为基准。
+        if (lastWinner != null) { continueAfterWin(lastWinner); return; }
         Seat claimant;
         claimant = firstClaimant(PlayerActionType.GANG);
         if (claimant != null) { applyExposedSet(claimant, PlayerActionType.GANG, 3); return; }
         claimant = firstClaimant(PlayerActionType.PENG);
         if (claimant != null) { applyExposedSet(claimant, PlayerActionType.PENG, 2); return; }
-        claimant = firstClaimant(PlayerActionType.CHI);
-        if (claimant != null) { applyChi(claimant); return; }
         currentTurn = nextSeat(lastDiscarder);
         drawFor(currentTurn);
     }
@@ -409,35 +408,6 @@ public final class MahjongRound {
             revision++;
             actionStartedAtMillis = System.currentTimeMillis();
         }
-    }
-
-    private void applyChi(Seat claimant) {
-        List<TileType> pair = findChiTiles(claimant).orElseThrow();
-        pair.forEach(tile -> hands.get(claimant).remove(tile));
-        List<TileType> sequence = new ArrayList<>(pair);
-        sequence.add(lastDiscard);
-        sequence.sort(Enum::compareTo);
-        melds.get(claimant).add(new Meld(PlayerActionType.CHI, sequence, lastDiscarder));
-        removeLastDiscardFromTable();
-        currentTurn = claimant;
-        phase = RoundPhase.WAITING_FOR_DISCARD;
-        claimResponses.clear();
-        revision++;
-        actionStartedAtMillis = System.currentTimeMillis();
-    }
-
-    private Optional<List<TileType>> findChiTiles(Seat seat) {
-        if (lastDiscard == null || !lastDiscard.suited()) return Optional.empty();
-        int ordinal = lastDiscard.ordinal();
-        int[][] offsets = {{-2, -1}, {-1, 1}, {1, 2}};
-        for (int[] pair : offsets) {
-            int left = ordinal + pair[0], right = ordinal + pair[1];
-            if (left < 0 || right >= TileType.values().length) continue;
-            TileType a = TileType.values()[left], b = TileType.values()[right];
-            if (a.suit() == lastDiscard.suit() && b.suit() == lastDiscard.suit()
-                    && hands.get(seat).contains(a) && hands.get(seat).contains(b)) return Optional.of(List.of(a, b));
-        }
-        return Optional.empty();
     }
 
     private void drawFor(Seat seat) {

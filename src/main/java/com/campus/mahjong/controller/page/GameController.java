@@ -69,7 +69,6 @@ public final class GameController {
     @FXML private FlowPane rightDiscardPane;
     @FXML private FlowPane leftDiscardPane;
     @FXML private FlowPane topDiscardPane;
-    @FXML private Button discardButton;
     @FXML private Button exchangeButton;
     private final List<String> exchangeSelection = new java.util.ArrayList<>();
     private final java.util.Map<String, Integer> exchangeRendered = new java.util.HashMap<>();
@@ -77,7 +76,6 @@ public final class GameController {
     @FXML private Button missingWanButton;
     @FXML private Button missingPinButton;
     @FXML private Button missingSouButton;
-    @FXML private Button chiButton;
     @FXML private Button pengButton;
     @FXML private Button gangButton;
     @FXML private Button huButton;
@@ -166,13 +164,11 @@ public final class GameController {
         }
     }
 
-    @FXML
     private void discardSelected() {
         if (selectedTile == null || selectedView == null) {
             actionTip.setText("请先选择一张手牌");
             return;
         }
-        discardButton.setDisable(true);
         handPane.setMouseTransparent(true);
         TranslateTransition move = new TranslateTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), selectedView);
         move.setByY(reducedMotion.isSelected() ? 0 : -90);
@@ -252,7 +248,6 @@ public final class GameController {
     }
 
     @FXML private void passAction() { applyClaim(PlayerActionType.PASS); }
-    @FXML private void chiAction() { applyClaim(PlayerActionType.CHI); }
     @FXML private void pengAction() { applyClaim(PlayerActionType.PENG); }
     @FXML
     private void gangAction() {
@@ -320,7 +315,6 @@ public final class GameController {
 
     private void submitNetworkAction(PlayerActionType action, List<Tile> tiles) {
         handPane.setMouseTransparent(true);
-        discardButton.setDisable(true);
         actionTip.setText("正在等待房主服务器确认…");
         lanSession.perform(action, tiles).whenComplete((result, error) -> runOnFx(() -> {
             handPane.setMouseTransparent(false);
@@ -431,6 +425,42 @@ public final class GameController {
                 settle.setInterpolator(Interpolator.EASE_OUT); settle.play();
             }
         });
+        if (previousCount != null && discards.size() > previousCount) {
+            showRecentDiscard(seat, discards.getLast());
+        }
+    }
+
+    /** 将新打出的牌短暂展示在出牌玩家面前，随后再让视线回到弃牌区。 */
+    private void showRecentDiscard(Seat seat, String tileName) {
+        TableSeatLayout.Position position = java.util.Arrays.stream(TableSeatLayout.Position.values())
+                .filter(candidate -> TableSeatLayout.seatAt(localSeat(), candidate) == seat)
+                .findFirst().orElseThrow();
+        MahjongTileView tile = new MahjongTileView(TileType.fromDisplayName(tileName), true);
+        tile.getStyleClass().add("recent-discard-tile");
+        tile.setManaged(false);
+        tile.setMouseTransparent(true);
+        switch (position) {
+            case BOTTOM -> { tile.setLayoutX(476); tile.setLayoutY(700); }
+            case RIGHT -> { tile.setLayoutX(795); tile.setLayoutY(472); tile.setRotate(-90); }
+            case TOP -> { tile.setLayoutX(476); tile.setLayoutY(112); tile.setRotate(180); }
+            case LEFT -> { tile.setLayoutX(160); tile.setLayoutY(472); tile.setRotate(90); }
+        }
+        tile.setScaleX(1.28);
+        tile.setScaleY(1.28);
+        tableBoard.getChildren().add(tile);
+
+        double fadeMillis = reducedMotion.isSelected() ? 1 : 140;
+        FadeTransition appear = new FadeTransition(Duration.millis(fadeMillis), tile);
+        appear.setFromValue(0);
+        appear.setToValue(1);
+        PauseTransition observe = new PauseTransition(Duration.millis(900));
+        FadeTransition disappear = new FadeTransition(Duration.millis(fadeMillis), tile);
+        disappear.setFromValue(1);
+        disappear.setToValue(0);
+        javafx.animation.SequentialTransition display =
+                new javafx.animation.SequentialTransition(appear, observe, disappear);
+        display.setOnFinished(event -> tableBoard.getChildren().remove(tile));
+        display.play();
     }
 
     private void fitTable() {
@@ -475,7 +505,7 @@ public final class GameController {
             networkGame.players().stream().filter(player -> player.seat() == seat).findFirst()
                     .ifPresent(player -> player.exposedGroups().forEach(group -> {
                         List<TileType> tiles = group.stream().map(tile -> TileType.fromDisplayName(tile.code())).toList();
-                        String label = tiles.size() == 4 ? "杠" : tiles.stream().distinct().count() == 1 ? "碰" : "吃";
+                        String label = tiles.size() == 4 ? "杠" : "碰";
                         addMeldGroup(pane, label, tiles);
                     }));
         } else {
@@ -483,7 +513,7 @@ public final class GameController {
                 addMeldGroup(pane, switch (meld.type()) {
                     case GANG -> "杠";
                     case PENG -> "碰";
-                    default -> "吃";
+                    default -> "副露";
                 }, meld.tiles());
             }
         }
@@ -610,7 +640,6 @@ public final class GameController {
         boolean claim = lanSession == null
                 ? DemoSession.isAwaitingLocalClaim() : actions.contains(PlayerActionType.PASS);
         show(passButton, claim);
-        show(chiButton, claim && actions.contains(PlayerActionType.CHI));
         show(pengButton, claim && actions.contains(PlayerActionType.PENG));
         boolean selfGang = actions.contains(PlayerActionType.DISCARD) && actions.contains(PlayerActionType.GANG);
         show(gangButton, (claim || selfGang) && actions.contains(PlayerActionType.GANG));
@@ -618,13 +647,15 @@ public final class GameController {
         boolean selfHu = actions.contains(PlayerActionType.DISCARD) && actions.contains(PlayerActionType.HU);
         show(huButton, (claim || selfHu) && actions.contains(PlayerActionType.HU));
         boolean mayDiscard = actions.contains(PlayerActionType.DISCARD);
-        show(discardButton, mayDiscard);
-        discardButton.setDisable(!mayDiscard || selectedTile == null);
-        if (claim) actionTip.setText("对手弃牌可响应，请选择吃、碰、杠、胡或过");
+        if (claim) actionTip.setText("对手弃牌可响应，请选择碰、杠、胡或过");
     }
 
     private void selectTile(MahjongTileView view, String tile, boolean drawn) {
         if (!currentActions().contains(PlayerActionType.DISCARD) || !canDiscardTile(tile)) return;
+        if (view == selectedView && tile.equals(selectedTile) && drawn == selectedIsDrawn) {
+            discardSelected();
+            return;
+        }
         handPane.getChildren().stream().filter(MahjongTileView.class::isInstance)
                 .map(MahjongTileView.class::cast).filter(item -> item != view)
                 .forEach(item -> returnToBase(item));
@@ -633,10 +664,9 @@ public final class GameController {
         selectedTile = tile;
         selectedIsDrawn = drawn;
         selectedTileLabel.setText(drawn ? "已选：" + tile + "（本轮摸牌）" : "已选：" + tile);
-        discardButton.setDisable(false);
-        actionTip.setText("点击“打出选中牌”确认；确认后其余手牌自动整理");
+        actionTip.setText("再次点击选中的牌即可打出；打出后其余手牌自动整理");
         if (localGangTiles().contains(tile)) {
-            actionTip.setText("该牌可补杠/暗杠；点击“补 / 暗杠”确认，或继续打出");
+            actionTip.setText("该牌可补杠/暗杠；点击“补 / 暗杠”确认，或再次点击该牌打出");
         }
         TranslateTransition lift = new TranslateTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 130), view);
         lift.setInterpolator(Interpolator.EASE_OUT); lift.setToY(-12); lift.play();

@@ -30,6 +30,7 @@ class SqliteRepositoryTest {
         PlayerId south = new PlayerId("south");
         players.save(new PlayerProfile(east, "东家", "", 0, 1));
         assertTrue(players.findByNickname("东家").isPresent());
+        assertEquals("东家", players.findMostRecent().orElseThrow().nickname());
         Map<PlayerId, PlayerRoundScore> scores = new LinkedHashMap<>();
         scores.put(east, new PlayerRoundScore("东家", 24));
         scores.put(south, new PlayerRoundScore("南家", -24));
@@ -38,6 +39,7 @@ class SqliteRepositoryTest {
         var ranking = games.leaderboard(10);
         assertEquals(2, ranking.size());
         assertEquals(24, ranking.get(0).totalScore());
+        assertEquals(24, games.findScore(east).orElseThrow().totalScore());
         assertEquals(1, ranking.get(0).games());
         assertEquals(1, games.recentGames(east, 10).size());
         assertEquals("南家", games.recentOpponents(east, 10).get(0).nickname());

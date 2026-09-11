@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BloodBattleTest {
     private FriendRoomSettings settings(int rounds) {
-        return new FriendRoomSettings(ModeCode.NORTHERN, 2, Optional.of(128), rounds, false, "");
+        return new FriendRoomSettings(ModeCode.SICHUAN, 2, Optional.of(128), rounds, false, "");
     }
 
     @Test void threeSelfDrawWinnersContinueAndPreviousWinnersStopPaying() throws Exception {
@@ -69,7 +69,7 @@ class BloodBattleTest {
         assertEquals(2, match.roundNumber());
         assertFalse(match.finished());
         assertTrue(match.round().winners().isEmpty());
-        assertEquals(83, match.round().wallRemaining());
+        assertEquals(55, match.round().wallRemaining());
         Map<Seat, Long> firstRound = match.scores();
         long secondRevision = match.revision();
         assertTrue(secondRevision > 0);
@@ -121,6 +121,9 @@ class BloodBattleTest {
     }
 
     static void prepare(MahjongRound round, Map<Seat, List<TileType>> overrides, TileType drawn, List<TileType> next) throws Exception {
+        if (round.phase() == RoundPhase.EXCHANGING_TILES) round.expireExchange(round.exchangeDeadline());
+        if (round.phase() == RoundPhase.CHOOSING_MISSING_SUIT) round.expireMissingSuitSelection(round.missingSuitDeadline());
+        Map<Seat, TileType.Suit> missing = field(round, "missingSuits"); missing.clear();
         List<TileType> filler = List.of(MAN_5, MAN_7, MAN_9, PIN_5, PIN_7, PIN_9, SOU_5, SOU_7, SOU_9, GREEN, WHITE, NORTH, MAN_6);
         Map<Seat, List<TileType>> hands = field(round, "hands");
         Map<Seat, TileType> draws = field(round, "drawnTiles"); draws.clear(); draws.put(Seat.EAST, drawn);

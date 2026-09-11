@@ -7,12 +7,12 @@
   <top><HBox alignment="CENTER_LEFT" spacing="14" styleClass="lobby-header">
    <StackPane styleClass="lobby-mark"><Label text="發"/></StackPane>
    <VBox spacing="2"><Label text="闹麻麻" styleClass="lobby-brand"/><Label text="好友麻将馆" styleClass="lobby-muted"/></VBox>
-   <Region HBox.hgrow="ALWAYS"/><Label text="四人一桌 · 局域网联机" styleClass="lobby-muted"/>
+   <Region HBox.hgrow="ALWAYS"/><Label fx:id="profileScoreLabel" text="本机积分  0" styleClass="lobby-score-chip"/><Label text="四人一桌 · 局域网联机" styleClass="lobby-header-muted"/>
    <Button text="联机指南  ↗" onAction="#showHelp" styleClass="lobby-link"/>
   </HBox></top>
   <center><ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="lobby-scroll">
    <content><HBox spacing="28" alignment="TOP_CENTER" styleClass="lobby-body">
-    <VBox spacing="22" minWidth="460" prefWidth="700" HBox.hgrow="ALWAYS">
+    <VBox spacing="22" minWidth="460" prefWidth="700" HBox.hgrow="ALWAYS" styleClass="lobby-main-panel">
      <HBox spacing="12" alignment="CENTER_LEFT" styleClass="lobby-hero">
       <VBox spacing="9" HBox.hgrow="ALWAYS"><Label text="好 友 入 座，好 戏 开 场" styleClass="lobby-kicker"/>
        <Label text="三缺一？&#10;就等你了。" styleClass="lobby-headline"/>
@@ -25,14 +25,8 @@
        <Button fx:id="sichuan" onAction="#chooseMode" maxWidth="Infinity" accessibleText="四川麻将" styleClass="lobby-mode,selected" GridPane.columnIndex="0" GridPane.rowIndex="0">
         <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="川"/></StackPane><VBox spacing="4"><Label text="四川麻将" styleClass="mode-name"/><Label text="缺一门 · 节奏明快" styleClass="mode-description"/></VBox></HBox></graphic>
        </Button>
-       <Button fx:id="changsha" onAction="#chooseMode" maxWidth="Infinity" accessibleText="长沙麻将" styleClass="lobby-mode" GridPane.columnIndex="1" GridPane.rowIndex="0">
-        <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="湘"/></StackPane><VBox spacing="4"><Label text="长沙麻将" styleClass="mode-name"/><Label text="地方番型 · 多种组合" styleClass="mode-description"/></VBox></HBox></graphic>
-       </Button>
-       <Button fx:id="northern" onAction="#chooseMode" maxWidth="Infinity" accessibleText="北方麻将" styleClass="lobby-mode" GridPane.columnIndex="0" GridPane.rowIndex="1">
-        <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="北"/></StackPane><VBox spacing="4"><Label text="北方麻将" styleClass="mode-name"/><Label text="可吃牌 · 经典玩法" styleClass="mode-description"/></VBox></HBox></graphic>
-       </Button>
-       <Button fx:id="redCenter" onAction="#chooseMode" maxWidth="Infinity" accessibleText="红中麻将" styleClass="lobby-mode" GridPane.columnIndex="1" GridPane.rowIndex="1">
-        <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="中"/></StackPane><VBox spacing="4"><Label text="红中麻将" styleClass="mode-name"/><Label text="红中百搭 · 轻松入门" styleClass="mode-description"/></VBox></HBox></graphic>
+       <Button fx:id="redCenter" onAction="#chooseMode" maxWidth="Infinity" accessibleText="红中麻将" styleClass="lobby-mode" GridPane.columnIndex="1" GridPane.rowIndex="0">
+        <graphic><HBox spacing="12" alignment="CENTER_LEFT"><StackPane styleClass="mode-glyph"><Label text="中"/></StackPane><VBox spacing="4"><Label text="红中麻将" styleClass="mode-name"/><Label text="四川血战 · 四红中赖子" styleClass="mode-description"/></VBox></HBox></graphic>
        </Button>
       </GridPane>
       <Label text="所有玩法均采用血战到底：三家胡牌或牌墙耗尽后，自动进入下一轮。" wrapText="true" styleClass="lobby-muted"/>

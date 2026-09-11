@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LanConnectivityTest {
     @Test
     void fourClientsJoinReadyStartAndShareAnAuthoritativeRound() throws Exception {
-        FriendRoomSettings settings = new FriendRoomSettings(ModeCode.NORTHERN,
+        FriendRoomSettings settings = new FriendRoomSettings(ModeCode.SICHUAN,
                 2, Optional.of(128), 2, false, "");
         LanSession host = await(LanSession.host(player("房主"), settings, 0, "127.0.0.1"));
         List<LanSession> sessions = new ArrayList<>();
@@ -47,6 +47,7 @@ class LanConnectivityTest {
             assertTrue(started > 0);
             assertTrue(sessions.stream().allMatch(session -> session.currentGame().orElseThrow().actionStartedAtMillis() == started));
             assertTrue(sessions.stream().noneMatch(session -> session.currentGame().orElseThrow().waitingForClaims()));
+            completeOpening(sessions);
             assertEquals(4, host.currentGame().orElseThrow().players().size());
             assertEquals(13, host.currentGame().orElseThrow().ownHand().size());
             assertTrue(host.currentGame().orElseThrow().drawnTile().isPresent());
@@ -55,11 +56,15 @@ class LanConnectivityTest {
                 assertFalse(guest.currentGame().orElseThrow().drawnTile().isPresent());
             }
 
-            Tile discard = host.currentGame().orElseThrow().drawnTile().orElseThrow();
+            long beforeDiscard = host.currentGame().orElseThrow().revision();
+            Tile discard = host.currentGame().orElseThrow().availableActions().stream()
+                    .filter(option -> option.type() == PlayerActionType.DISCARD).findFirst().orElseThrow()
+                    .relatedTiles().getFirst();
             assertTrue(await(host.perform(PlayerActionType.DISCARD, List.of(discard))).accepted());
             waitUntil(() -> sessions.stream().allMatch(session ->
-                    session.currentGame().orElseThrow().revision() >= 1));
+                    session.currentGame().orElseThrow().revision() > beforeDiscard));
 
+            long claimRevision = host.currentGame().orElseThrow().revision();
             boolean waiting = host.currentGame().orElseThrow().waitingForClaims();
             assertTrue(sessions.stream().allMatch(session -> session.currentGame().orElseThrow().waitingForClaims() == waiting));
             List<LanSession> responders = sessions.stream()
@@ -69,15 +74,19 @@ class LanConnectivityTest {
             for (LanSession responder : responders) {
                 assertTrue(await(responder.perform(PlayerActionType.PASS, List.of())).accepted());
             }
-            waitUntil(() -> sessions.stream().allMatch(session ->
-                    session.currentGame().orElseThrow().revision() == 2));
+            if (!responders.isEmpty()) {
+                waitUntil(() -> sessions.stream().allMatch(session ->
+                        session.currentGame().orElseThrow().revision() > claimRevision));
+            }
             assertEquals(Seat.SOUTH, host.currentGame().orElseThrow().currentTurn());
             int steps = 0;
             while (host.currentGame().orElseThrow().status() != GameStatus.FINISHED && steps++ < 1000) {
                 long previous = host.currentGame().orElseThrow().revision();
                 List<LanSession> claimants = sessions.stream().filter(session -> session.currentGame().orElseThrow()
                         .availableActions().stream().anyMatch(action -> action.type() == PlayerActionType.PASS)).toList();
-                if (!claimants.isEmpty()) {
+                if (sessions.stream().anyMatch(session -> session.currentGame().orElseThrow().exchangingTiles())) {
+                    completeOpening(sessions);
+                } else if (!claimants.isEmpty()) {
                     for (LanSession claimant : claimants) {
                         boolean hu = claimant.currentGame().orElseThrow().availableActions().stream().anyMatch(action -> action.type() == PlayerActionType.HU);
                         assertTrue(await(claimant.perform(hu ? PlayerActionType.HU : PlayerActionType.PASS, List.of())).accepted());
@@ -87,8 +96,11 @@ class LanConnectivityTest {
                             .availableActions().stream().anyMatch(action -> action.type() == PlayerActionType.DISCARD)).findFirst().orElseThrow();
                     GameSnapshot state = active.currentGame().orElseThrow();
                     boolean hu = state.availableActions().stream().anyMatch(action -> action.type() == PlayerActionType.HU);
+                    Tile legalDiscard = state.availableActions().stream()
+                            .filter(action -> action.type() == PlayerActionType.DISCARD).findFirst().orElseThrow()
+                            .relatedTiles().getFirst();
                     assertTrue(await(active.perform(hu ? PlayerActionType.HU : PlayerActionType.DISCARD,
-                            hu ? List.of() : List.of(state.drawnTile().orElseGet(() -> state.ownHand().getFirst())))).accepted());
+                            hu ? List.of() : List.of(legalDiscard))).accepted());
                 }
                 waitUntil(() -> sessions.stream().allMatch(session -> session.currentGame().orElseThrow().revision() > previous));
                 GameSnapshot authoritative = host.currentGame().orElseThrow();
@@ -192,6 +204,22 @@ class LanConnectivityTest {
     private boolean allReady(RoomSnapshot room) {
         return room.players().size() == 4
                 && room.players().stream().allMatch(player -> player.ready() && player.connected());
+    }
+
+    private void completeOpening(List<LanSession> sessions) throws Exception {
+        for (LanSession session : sessions) {
+            GameSnapshot state = session.currentGame().orElseThrow();
+            List<Tile> all = java.util.stream.Stream.concat(state.ownHand().stream(), state.drawnTile().stream()).toList();
+            List<Tile> selection = all.stream().collect(java.util.stream.Collectors.groupingBy(tile ->
+                            com.campus.mahjong.model.game.TileType.fromDisplayName(tile.code()).suit()))
+                    .values().stream().filter(group -> group.size() >= 3).findFirst().orElseThrow().subList(0, 3);
+            assertTrue(await(session.perform(PlayerActionType.EXCHANGE_THREE, selection)).accepted());
+        }
+        waitUntil(() -> sessions.stream().allMatch(session -> session.currentGame().orElseThrow().choosingMissingSuit()));
+        for (LanSession session : sessions) {
+            assertTrue(await(session.perform(PlayerActionType.DING_QUE, List.of(new Tile("一万")))).accepted());
+        }
+        waitUntil(() -> sessions.stream().noneMatch(session -> session.currentGame().orElseThrow().choosingMissingSuit()));
     }
 
     private <T> T await(CompletionStage<T> stage) throws Exception {

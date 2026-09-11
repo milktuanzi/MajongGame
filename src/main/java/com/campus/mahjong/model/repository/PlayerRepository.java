@@ -10,5 +10,7 @@ public interface PlayerRepository {
     void save(PlayerProfile profile);
     Optional<PlayerProfile> findById(PlayerId id);
     Optional<PlayerProfile> findByNickname(String nickname);
+    /** 返回最近一次保存或使用的本机玩家。 */
+    Optional<PlayerProfile> findMostRecent();
     List<PlayerProfile> findAll();
 }

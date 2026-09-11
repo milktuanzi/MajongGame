@@ -61,10 +61,8 @@
                             <Button fx:id="missingPinButton" text="缺筒" onAction="#chooseMissingPin" styleClass="action-button, missing-choice, missing-pin"/>
                             <Button fx:id="missingSouButton" text="缺条" onAction="#chooseMissingSou" styleClass="action-button, missing-choice, missing-sou"/>
                             <Button fx:id="passButton" text="过" onAction="#passAction" styleClass="action-button"/>
-                            <Button fx:id="chiButton" text="吃" onAction="#chiAction" styleClass="action-button"/>
                             <Button fx:id="pengButton" text="碰" onAction="#pengAction" styleClass="action-button"/>
                             <Button fx:id="gangButton" text="杠" onAction="#gangAction" styleClass="action-button"/>
-                            <Button fx:id="discardButton" text="打出选中牌" onAction="#discardSelected" disable="true" styleClass="secondary-button"/>
                             <Button fx:id="huButton" text="胡" onAction="#winRound" styleClass="primary-button"/>
                         </HBox>
                     </VBox>

@@ -1,6 +1,7 @@
 package com.campus.mahjong.integration;
 
 import org.junit.jupiter.api.Test;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,7 +17,9 @@ class ModularGameStartupTest {
                 .redirectErrorStream(true).redirectOutput(log.toFile()).start();
         try {
             assertTrue(process.waitFor(30, TimeUnit.SECONDS), "模块启动测试超时：" + log);
-            assertEquals(0, process.exitValue(), java.nio.file.Files.readString(log));
+            // 子进程在 Windows 控制台下可能输出 GBK；String 构造器会替换无法解码的字节，
+            // 避免日志解码异常掩盖真正的启动失败。
+            assertEquals(0, process.exitValue(), new String(java.nio.file.Files.readAllBytes(log), Charset.defaultCharset()));
         } finally { if (process.isAlive()) process.destroyForcibly(); }
     }
 }

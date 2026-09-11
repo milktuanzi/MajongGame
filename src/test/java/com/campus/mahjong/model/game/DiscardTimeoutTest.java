@@ -9,14 +9,14 @@ import static com.campus.mahjong.model.game.TileType.*;
 class DiscardTimeoutTest {
     private MahjongRound start(ModeCode mode) {
         var round = MahjongRound.start(new FriendRoomSettings(mode, 2, Optional.of(128), 2, false, ""), 42);
-        if (mode == ModeCode.SICHUAN) {
-            round.expireExchange(round.exchangeDeadline());
-            for (Seat seat : Seat.values()) round.chooseMissingSuit(seat, Suit.MAN, round.revision());
-        }
+        round.expireExchange(round.exchangeDeadline());
+        for (Seat seat : Seat.values()) round.chooseMissingSuit(seat, Suit.MAN, round.revision());
         return round;
     }
-    @Test void waitsFifteenSecondsThenDiscardsDrawnTileAndRejectsStaleRequest() {
-        var round = start(ModeCode.NORTHERN);
+    @Test void waitsFifteenSecondsThenDiscardsDrawnTileAndRejectsStaleRequest() throws Exception {
+        var round = start(ModeCode.RED_CENTER);
+        Map<Seat, Suit> missing = BloodBattleTest.field(round, "missingSuits");
+        missing.clear();
         var drawn = round.drawnTile(Seat.EAST).orElseThrow(); long revision = round.revision();
         assertFalse(round.expireDiscard(round.actionStartedAtMillis() + 14999));
         assertTrue(round.expireDiscard(round.actionStartedAtMillis() + 15000));

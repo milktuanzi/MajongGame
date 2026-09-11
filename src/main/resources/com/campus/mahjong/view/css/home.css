@@ -122,6 +122,7 @@
 .table-center { -fx-padding: 10; -fx-background-color: transparent; }
 .seat-discard-area { -fx-min-height: 2; -fx-padding: 3 6; -fx-background-color: transparent; -fx-border-color: transparent; }
 .discarded-tile { -fx-opacity: .96; }
+.recent-discard-tile { -fx-effect: dropshadow(gaussian, rgba(255,224,152,.9), 18, .35, 0, 0); }
 .table-caption { -fx-text-fill: #fff1bd; -fx-font-weight: bold; }
 .table-empty { -fx-text-fill: rgba(239,249,218,.74); -fx-font-size: 12; }
 .turn-tip { -fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 8 16; -fx-text-fill: #fff4cc; -fx-font-weight: bold; }
@@ -160,18 +161,30 @@
 .turn-pointer:active { -fx-text-fill: #ffdd75; -fx-effect: dropshadow(gaussian, rgba(255,219,102,.8), 12, .5, 0, 0); }
 
 /* 好友大厅：独立作用域，避免影响牌桌与结算页。 */
-.home-root { -fx-font-family: "PingFang SC", "Microsoft YaHei UI", "Segoe UI"; -fx-background-color: #f1f5f4; -fx-font-size: 13; }
-.lobby-header { -fx-padding: 20 34; -fx-border-color: transparent transparent #dce5e1 transparent; }
+.home-root {
+    -fx-font-family: "PingFang SC", "Microsoft YaHei UI", "Segoe UI";
+    -fx-background-color: #173e32;
+    -fx-background-image: url("../images/table/lobby-garden-background.png");
+    -fx-background-size: cover;
+    -fx-background-position: center;
+    -fx-font-size: 13;
+}
+.lobby-header { -fx-padding: 16 34; -fx-background-color: rgba(18,37,28,.88); -fx-border-color: transparent transparent rgba(240,205,122,.38) transparent; }
+.lobby-header .lobby-muted { -fx-text-fill: #bcd0c1; }
 .lobby-mark { -fx-min-width: 42; -fx-max-width: 42; -fx-min-height: 50; -fx-max-height: 50; -fx-background-color: #fffdfa; -fx-background-radius: 7; -fx-border-color: #d2ddd5; -fx-border-radius: 7; -fx-border-width: 1 1 4 1; }
 .lobby-mark .label { -fx-text-fill: #267157; -fx-font-size: 28; -fx-font-weight: bold; }
-.lobby-brand { -fx-font-size: 23; -fx-font-weight: bold; -fx-text-fill: #173e32; }
+.lobby-brand { -fx-font-size: 23; -fx-font-weight: bold; -fx-text-fill: #fff3cf; }
+.lobby-header-muted { -fx-text-fill: #c9ddcd; -fx-font-size: 12; }
+.lobby-score-chip { -fx-background-color: rgba(106,72,25,.9); -fx-background-radius: 15; -fx-padding: 7 12; -fx-text-fill: #ffe7a0; -fx-font-size: 11; -fx-font-weight: bold; }
 .lobby-muted { -fx-text-fill: #486357; -fx-font-size: 12; }
+.lobby-header .lobby-link { -fx-text-fill: #e5d6a9; }
 .lobby-link { -fx-background-color: transparent; -fx-text-fill: #285e4c; -fx-font-size: 12; -fx-padding: 5 0 5 10; -fx-cursor: hand; }
-.lobby-link:hover { -fx-text-fill: #bc493c; }
+.lobby-link:hover { -fx-text-fill: #d8a44b; }
 .lobby-link:focused { -fx-border-color: #267157; -fx-border-radius: 4; }
 .lobby-scroll, .lobby-scroll > .viewport { -fx-background-color: transparent; -fx-border-color: transparent; }
 .lobby-body { -fx-padding: 22 34; }
-.lobby-hero { -fx-background-color: #174e3e; -fx-background-radius: 20; -fx-padding: 24 28; -fx-min-height: 190; }
+.lobby-main-panel { -fx-background-color: rgba(242,239,218,.88); -fx-background-radius: 22; -fx-border-color: rgba(111,83,40,.45); -fx-border-radius: 22; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(15,33,24,.36), 24, .18, 0, 8); }
+.lobby-hero { -fx-background-color: rgba(22,62,49,.94); -fx-background-radius: 18; -fx-border-color: rgba(240,205,122,.45); -fx-border-radius: 18; -fx-padding: 22 26; -fx-min-height: 178; }
 .lobby-kicker { -fx-text-fill: #bbd7c5; -fx-font-size: 10; -fx-font-weight: bold; }
 .lobby-headline { -fx-text-fill: #fffaf0; -fx-font-size: 38; -fx-font-weight: bold; -fx-line-spacing: -2; }
 .lobby-hero-copy { -fx-text-fill: #d1e4d8; -fx-font-size: 12; }
@@ -191,7 +204,7 @@
 .lobby-rank-index { -fx-min-width: 28; -fx-text-fill: #60776c; -fx-font-size: 11; }
 .lobby-rank-name { -fx-text-fill: #345748; -fx-font-size: 12; }
 .lobby-rank-score { -fx-text-fill: #275e46; -fx-font-family: "Menlo"; -fx-font-size: 13; -fx-font-weight: bold; }
-.lobby-room-panel { -fx-background-color: white; -fx-background-radius: 18; -fx-padding: 24; -fx-border-color: #dce5df; -fx-border-radius: 18; }
+.lobby-room-panel { -fx-background-color: rgba(255,252,239,.94); -fx-background-radius: 18; -fx-padding: 24; -fx-border-color: rgba(111,83,40,.5); -fx-border-radius: 18; -fx-effect: dropshadow(gaussian, rgba(15,33,24,.38), 24, .18, 0, 8); }
 .lobby-form-title { -fx-font-size: 23; -fx-font-weight: bold; -fx-text-fill: #214535; }
 .lobby-field-label { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #365246; }
 .lobby-input, .lobby-select { -fx-background-color: #f6f8f7; -fx-border-color: #cfddd5; -fx-border-radius: 7; -fx-background-radius: 7; -fx-padding: 10 11; -fx-text-fill: #254737; -fx-prompt-text-fill: #687d71; -fx-font-size: 13; }
@@ -206,8 +219,9 @@
 .lobby-join:hover { -fx-background-color: #dcece1; }
 .lobby-join:focused { -fx-border-color: #267157; }
 .lobby-error { -fx-text-fill: #a6382b; -fx-font-size: 11; }
-.lobby-footer { -fx-padding: 14 34; -fx-border-color: #dce5e1 transparent transparent transparent; }
-.lobby-footer-title { -fx-text-fill: #315948; -fx-font-size: 12; }
+.lobby-footer { -fx-padding: 12 34; -fx-background-color: rgba(18,37,28,.86); -fx-border-color: rgba(240,205,122,.3) transparent transparent transparent; }
+.lobby-footer .lobby-muted { -fx-text-fill: #bcd0c1; }
+.lobby-footer-title { -fx-text-fill: #f5e7bd; -fx-font-size: 12; }
 
 /* 清晰牌面：统一白瓷底与轻薄绿背。 */
 .tile-face { -fx-fill: #fffefa; -fx-stroke: #d9ddd5; -fx-stroke-width: .8; -fx-effect: dropshadow(gaussian, rgba(10,35,26,.22), 3, .1, 0, 2); }

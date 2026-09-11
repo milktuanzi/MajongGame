@@ -54,7 +54,7 @@ public final class MahjongMatch {
                     round.declareSelfGang(seat, Objects.requireNonNull(tile, "请选择杠牌"), revision);
                 else round.submitClaim(seat, action, revision);
             }
-            case PASS, PENG, CHI -> round.submitClaim(seat, action, revision);
+            case PASS, PENG -> round.submitClaim(seat, action, revision);
             default -> throw new IllegalArgumentException("不支持的操作：" + action);
         }
         synchronizeRound();

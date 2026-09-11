@@ -85,14 +85,10 @@ class ExchangeThreeTest {
         assertEquals(14, r.hand(Seat.EAST).size()); assertEquals(13, r.organizedHand(Seat.EAST).size());
         assertTrue(r.exchangeReceived(Seat.EAST).contains(r.drawnTile(Seat.EAST).orElseThrow()));
     }
-    @Test void matchTimeoutStartsFreshMissingSuitWindowAndOtherModesSkipExchange() {
+    @Test void matchTimeoutStartsFreshMissingSuitWindow() {
         var match = new MahjongMatch(new FriendRoomSettings(ModeCode.SICHUAN, 2, Optional.of(128), 2, false, ""), 42, 1);
         assertTrue(match.expireTimedActions(match.round().exchangeDeadline()));
         assertEquals(RoundPhase.CHOOSING_MISSING_SUIT, match.round().phase());
         assertTrue(match.round().missingSuits().isEmpty());
-        for (ModeCode mode : List.of(ModeCode.NORTHERN, ModeCode.CHANGSHA, ModeCode.RED_CENTER)) {
-            var r = MahjongRound.start(new FriendRoomSettings(mode, 2, Optional.of(128), 2, false, ""), 42);
-            assertEquals(RoundPhase.WAITING_FOR_DISCARD, r.phase());
-        }
     }
 }

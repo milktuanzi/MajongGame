@@ -2,6 +2,8 @@
 
 数据库默认创建在 `data/mahjong.db`，由 `LocalDataServices` 在程序启动时自动迁移。
 
+玩家名称、头像、金币与等级保存在 `players`；牌局积分增量保存在 `game_score_entries`，累计积分、局数和胜局数保存在 `friend_scores`。首页启动时按 `players.updated_at` 恢复最近使用的本机玩家，并通过玩家 ID 读取其累计积分。
+
 ## 表结构
 
 ```text

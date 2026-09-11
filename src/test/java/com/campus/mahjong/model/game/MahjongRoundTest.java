@@ -13,23 +13,30 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MahjongRoundTest {
     private FriendRoomSettings settings() {
-        return new FriendRoomSettings(ModeCode.NORTHERN, 2, Optional.of(128), 8, false, "");
+        return new FriendRoomSettings(ModeCode.SICHUAN, 2, Optional.of(128), 8, false, "");
+    }
+
+    private MahjongRound startedRound(long seed) {
+        MahjongRound round = MahjongRound.start(settings(), seed);
+        round.expireExchange(round.exchangeDeadline());
+        round.expireMissingSuitSelection(round.missingSuitDeadline());
+        return round;
     }
 
     @Test
     void dealsCorrectNumberOfTilesAndBuildsFullWall() {
-        MahjongRound round = MahjongRound.start(settings(), 42L);
+        MahjongRound round = startedRound(42L);
         assertEquals(14, round.hand(Seat.EAST).size());
         assertEquals(13, round.hand(Seat.SOUTH).size());
-        assertEquals(83, round.wallRemaining());
+        assertEquals(55, round.wallRemaining());
         assertEquals(RoundPhase.WAITING_FOR_DISCARD, round.phase());
     }
 
     @Test
     void drawnTileRemainsSeparateUntilAConfirmedDiscardReorganizesHand() {
-        MahjongRound round = MahjongRound.start(settings(), 23L);
+        MahjongRound round = startedRound(23L);
         TileType drawn = round.drawnTile(Seat.EAST).orElseThrow();
-        TileType organized = round.organizedHand(Seat.EAST).get(0);
+        TileType organized = round.discardableTiles(Seat.EAST).getFirst();
 
         assertEquals(13, round.organizedHand(Seat.EAST).size());
         assertEquals(14, round.hand(Seat.EAST).size());

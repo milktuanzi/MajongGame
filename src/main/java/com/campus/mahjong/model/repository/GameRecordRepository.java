@@ -16,6 +16,7 @@ public interface GameRecordRepository {
     void recordLedger(String matchId, List<com.campus.mahjong.model.game.ScoreEntry> entries,
                       Map<com.campus.mahjong.model.common.MahjongTypes.Seat, String> names);
     List<FriendScoreEntry> leaderboard(int limit);
+    Optional<FriendScoreEntry> findScore(PlayerId playerId);
     List<FriendScoreEntry> recentOpponents(PlayerId playerId, int limit);
     List<GameRecord> recentGames(PlayerId playerId, int limit);
 

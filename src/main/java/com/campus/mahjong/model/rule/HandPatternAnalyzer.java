@@ -31,7 +31,7 @@ public final class HandPatternAnalyzer {
             patterns.add("混一色");
             fan += 2;
         }
-        if (isAllTriplets(concealed) && exposed.stream().noneMatch(meld -> meld.type().name().equals("CHI"))) {
+        if (isAllTriplets(concealed)) {
             patterns.add("碰碰胡");
             fan += 2;
         }

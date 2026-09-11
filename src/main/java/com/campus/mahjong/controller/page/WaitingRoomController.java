@@ -35,8 +35,7 @@ public final class WaitingRoomController {
     @FXML private Label roomStatusLabel;
 
     private final Map<ModeCode, String> modeNames = Map.of(
-            ModeCode.SICHUAN, "四川麻将", ModeCode.CHANGSHA, "长沙麻将",
-            ModeCode.NORTHERN, "北方麻将", ModeCode.RED_CENTER, "红中麻将");
+            ModeCode.SICHUAN, "四川麻将", ModeCode.RED_CENTER, "红中麻将");
     private LanSession lanSession;
     private AutoCloseable roomSubscription;
     private AutoCloseable gameSubscription;

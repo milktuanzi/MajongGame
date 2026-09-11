@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DemoBloodBattleTest {
     @Test void localWinnerSpectatesBotsAndEntersNextRoundWithoutSettlement() throws Exception {
-        DemoSession.createRoom("本机测试", ModeCode.NORTHERN, "2 轮", "2 倍", "128 分");
-        MahjongMatch match = new MahjongMatch(new FriendRoomSettings(ModeCode.NORTHERN, 2, Optional.of(128), 2, false, ""), 42, 1);
+        DemoSession.createRoom("本机测试", ModeCode.SICHUAN, "2 轮", "2 倍", "128 分");
+        MahjongMatch match = new MahjongMatch(new FriendRoomSettings(ModeCode.SICHUAN, 2, Optional.of(128), 2, false, ""), 42, 1);
         var field = DemoSession.class.getDeclaredField("match"); field.setAccessible(true); field.set(null, match);
         try {
             BloodBattleTest.prepareThreeSelfDraws(match.round()); DemoSession.synchronizeProgress();

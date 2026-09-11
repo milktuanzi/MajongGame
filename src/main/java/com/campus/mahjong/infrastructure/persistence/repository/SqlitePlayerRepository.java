@@ -38,6 +38,14 @@ public final class SqlitePlayerRepository implements PlayerRepository {
         return find("SELECT * FROM players WHERE nickname=?", nickname);
     }
 
+    @Override public Optional<PlayerProfile> findMostRecent() {
+        try (var connection = database.connect();
+             var statement = connection.prepareStatement("SELECT * FROM players ORDER BY updated_at DESC LIMIT 1");
+             var results = statement.executeQuery()) {
+            return results.next() ? Optional.of(read(results)) : Optional.empty();
+        } catch (SQLException exception) { throw failure("读取最近玩家失败", exception); }
+    }
+
     @Override public List<PlayerProfile> findAll() {
         List<PlayerProfile> players = new ArrayList<>();
         try (var connection = database.connect(); var statement = connection.prepareStatement("SELECT * FROM players ORDER BY nickname");

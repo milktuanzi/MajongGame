@@ -32,6 +32,7 @@ public final class HomeController {
     @FXML private ComboBox<String> multiplierBox;
     @FXML private ComboBox<String> scoreCapBox;
     @FXML private Label modeHintLabel;
+    @FXML private Label profileScoreLabel;
     @FXML private Label errorLabel;
     @FXML private Label rank1Name;
     @FXML private Label rank1Score;
@@ -40,23 +41,26 @@ public final class HomeController {
     @FXML private Label rank3Name;
     @FXML private Label rank3Score;
     @FXML private Button sichuan;
-    @FXML private Button changsha;
-    @FXML private Button northern;
     @FXML private Button redCenter;
     @FXML private Button createButton;
     @FXML private Button joinButton;
 
     private final Map<String, ModeCode> modes = Map.of(
-            "sichuan", ModeCode.SICHUAN, "changsha", ModeCode.CHANGSHA,
-            "northern", ModeCode.NORTHERN, "redCenter", ModeCode.RED_CENTER);
+            "sichuan", ModeCode.SICHUAN, "redCenter", ModeCode.RED_CENTER);
     private final Map<ModeCode, String> names = Map.of(
-            ModeCode.SICHUAN, "四川麻将", ModeCode.CHANGSHA, "长沙麻将",
-            ModeCode.NORTHERN, "北方麻将", ModeCode.RED_CENTER, "红中麻将");
+            ModeCode.SICHUAN, "四川麻将", ModeCode.RED_CENTER, "红中麻将");
     private ModeCode selectedMode = ModeCode.SICHUAN;
 
     @FXML
     private void initialize() {
-        nicknameField.setText(DemoSession.nickname);
+        LocalDataServices.players().findMostRecent().ifPresentOrElse(profile -> {
+            nicknameField.setText(profile.nickname());
+            DemoSession.nickname = profile.nickname();
+        }, () -> nicknameField.setText(DemoSession.nickname));
+        refreshProfileScore();
+        nicknameField.focusedProperty().addListener((observable, wasFocused, focused) -> {
+            if (!focused) refreshProfileScore();
+        });
         errorLabel.managedProperty().bind(errorLabel.textProperty().isNotEmpty());
         errorLabel.visibleProperty().bind(errorLabel.managedProperty());
         int index = 0;
@@ -80,7 +84,7 @@ public final class HomeController {
     private void chooseMode(ActionEvent event) {
         Button selected = (Button) event.getSource();
         selectedMode = modes.get(selected.getId());
-        List.of(sichuan, changsha, northern, redCenter)
+        List.of(sichuan, redCenter)
                 .forEach(button -> button.getStyleClass().remove("selected"));
         selected.getStyleClass().add("selected");
         modeHintLabel.setText(names.get(selectedMode));
@@ -136,6 +140,15 @@ public final class HomeController {
             names[index].setText(index == 0 ? "打完第一场，留下你的战绩" : "等待牌友入榜");
             scores[index].setText("—");
         }
+    }
+
+    private void refreshProfileScore() {
+        String nickname = nicknameField.getText() == null ? "" : nicknameField.getText().trim();
+        long score = LocalDataServices.players().findByNickname(nickname)
+                .flatMap(profile -> LocalDataServices.games().findScore(profile.id()))
+                .map(com.campus.mahjong.model.common.MahjongTypes.FriendScoreEntry::totalScore)
+                .orElse(0L);
+        profileScoreLabel.setText("本机积分  " + (score > 0 ? "+" : "") + score);
     }
 
     @FXML private void showHelp() {

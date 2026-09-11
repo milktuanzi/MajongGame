@@ -12,7 +12,6 @@ public interface RegionalRuleSet {
     ModeCode mode();
     String displayName();
     List<TileType> buildWall();
-    boolean allowChi();
     boolean canWin(List<TileType> concealed, List<Meld> exposed);
     HandPatternAnalyzer.Analysis analyze(List<TileType> concealed, List<Meld> exposed);
 }

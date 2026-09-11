@@ -96,7 +96,7 @@ class MahjongClaimAndGangTest {
 
     @Test void huTakesPriorityOverPengRegardlessOfResponseOrder() throws Exception {
         List<TileType> ready = List.of(MAN_2, MAN_2, MAN_2, MAN_4, MAN_4, MAN_4,
-                PIN_2, PIN_2, PIN_2, SOU_2, SOU_2, SOU_2, RED);
+                PIN_2, PIN_2, PIN_2, MAN_6, MAN_6, MAN_6, RED);
         for (boolean huFirst : List.of(true, false)) {
             MahjongRound round = fixture(Map.of(Seat.SOUTH, withCopies(RED, 2, 13), Seat.WEST, ready), RED, List.of());
             round.discard(Seat.EAST, RED, 0);
@@ -108,19 +108,8 @@ class MahjongClaimAndGangTest {
             assertEquals(Seat.WEST, round.wins().getFirst().winner().orElseThrow());
             assertFalse(round.wins().getFirst().selfDraw());
             assertTrue(round.melds(Seat.SOUTH).isEmpty());
+            assertEquals(Seat.NORTH, round.currentTurn(), "胡牌后应由胡牌玩家的下一家操作");
         }
-    }
-
-    @Test void chiOnlyPromptsTheNextSeatInNorthernRules() throws Exception {
-        MahjongRound round = fixture(Map.of(), MAN_2, List.of());
-        round.discard(Seat.EAST, MAN_2, 0);
-        assertEquals(EnumSet.of(PlayerActionType.CHI, PlayerActionType.PASS), round.legalActions(Seat.SOUTH));
-        assertTrue(round.legalActions(Seat.WEST).isEmpty());
-        round.submitClaim(Seat.SOUTH, PlayerActionType.CHI, round.revision());
-        assertEquals(Seat.SOUTH, round.currentTurn());
-        assertEquals(11, round.hand(Seat.SOUTH).size());
-        assertTrue(round.drawnTile(Seat.SOUTH).isEmpty());
-        assertConservation(round);
     }
 
     @Test void invalidGangDoesNotMutateRound() throws Exception {
@@ -142,7 +131,10 @@ class MahjongClaimAndGangTest {
 
     // 固定合法牌局，避免随机发牌让关键回归分支时有时无；不增加生产环境的改牌入口。
     private MahjongRound fixture(Map<Seat, List<TileType>> overrides, TileType drawn, List<Meld> eastMelds) throws Exception {
-        MahjongRound round = MahjongRound.start(new FriendRoomSettings(ModeCode.NORTHERN, 2, Optional.of(128), 8, false, ""), 42);
+        MahjongRound round = MahjongRound.start(new FriendRoomSettings(ModeCode.SICHUAN, 2, Optional.of(128), 8, false, ""), 42);
+        var phase = MahjongRound.class.getDeclaredField("phase");
+        phase.setAccessible(true);
+        phase.set(round, RoundPhase.WAITING_FOR_DISCARD);
         Map<Seat, List<TileType>> hands = field(round, "hands");
         for (Seat seat : Seat.values()) hands.put(seat, new ArrayList<>(overrides.getOrDefault(seat, FILLER)));
         Map<Seat, TileType> draws = field(round, "drawnTiles");

@@ -93,11 +93,26 @@ public final class SqliteGameRecordRepository implements GameRecordRepository {
         } catch (SQLException exception) { throw new IllegalStateException("读取排行榜失败", exception); }
     }
 
+    @Override public Optional<FriendScoreEntry> findScore(PlayerId playerId) {
+        String sql = """
+                SELECT p.id,p.nickname,s.total_score,s.games,s.wins FROM players p
+                LEFT JOIN friend_scores s ON s.player_id=p.id WHERE p.id=?""";
+        try (var connection = database.connect(); var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, playerId.value());
+            try (var results = statement.executeQuery()) {
+                if (!results.next()) return Optional.empty();
+                return Optional.of(new FriendScoreEntry(playerId, results.getString("nickname"),
+                        results.getLong("total_score"), results.getInt("games"), results.getInt("wins")));
+            }
+        } catch (SQLException exception) { throw new IllegalStateException("读取玩家积分失败", exception); }
+    }
+
     @Override public List<GameRecord> recentGames(PlayerId playerId, int limit) {
         String sql = """
                 SELECT g.id,g.room_code,g.mode,g.round_number,g.winner_id,g.played_at
                 FROM game_records g JOIN game_score_entries e ON e.game_id=g.id
-                WHERE e.player_id=? ORDER BY g.played_at DESC LIMIT ?""";
+                WHERE e.player_id=? AND g.mode IN ('SICHUAN','RED_CENTER')
+                ORDER BY g.played_at DESC LIMIT ?""";
         List<GameRecord> rows = new ArrayList<>();
         try (var connection = database.connect(); var statement = connection.prepareStatement(sql)) {
             statement.setString(1, playerId.value()); statement.setInt(2, Math.max(1, limit));

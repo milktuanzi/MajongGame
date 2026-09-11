@@ -20,8 +20,6 @@ public final class RegionalRules {
     private static Map<ModeCode, RegionalRuleSet> createRules() {
         EnumMap<ModeCode, RegionalRuleSet> rules = new EnumMap<>(ModeCode.class);
         register(rules, new SichuanRuleSet());
-        register(rules, new ChangshaRuleSet());
-        register(rules, new NorthernRuleSet());
         register(rules, new RedCenterRuleSet());
         return Map.copyOf(rules);
     }

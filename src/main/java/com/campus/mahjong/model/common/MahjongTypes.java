@@ -10,12 +10,12 @@ import java.util.Optional;
 public final class MahjongTypes {
     private MahjongTypes() {}
 
-    public enum ModeCode { SICHUAN, CHANGSHA, NORTHERN, RED_CENTER }
+    public enum ModeCode { SICHUAN, RED_CENTER }
     public enum RoomKind { FRIEND }
     public enum RoomStatus { WAITING, READY_CHECK, PLAYING, FINISHED, CLOSED }
     public enum GameStatus { PREPARING, DEALING, PLAYING, SETTLING, FINISHED, ABORTED }
     public enum Seat { EAST, SOUTH, WEST, NORTH }
-    public enum PlayerActionType { DRAW, DISCARD, CHI, PENG, GANG, HU, PASS, READY, DING_QUE, EXCHANGE_THREE }
+    public enum PlayerActionType { DRAW, DISCARD, PENG, GANG, HU, PASS, READY, DING_QUE, EXCHANGE_THREE }
     public enum PageId { HOME, FRIEND_ROOM_SETUP, ROOM, GAME, RESULT }
 
     public record PlayerId(String value) {
