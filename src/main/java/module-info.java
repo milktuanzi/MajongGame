@@ -26,6 +26,7 @@ module com.campus.mahjong.contracts {
     exports com.campus.mahjong.infrastructure.network.protocol;
 
     opens com.campus.mahjong.controller.page to javafx.fxml;
+    opens com.campus.mahjong.view.component to javafx.fxml;
     opens com.campus.mahjong.model.common to com.fasterxml.jackson.databind;
     opens com.campus.mahjong.infrastructure.network.protocol to com.fasterxml.jackson.databind;
 }

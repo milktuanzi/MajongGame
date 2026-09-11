@@ -42,6 +42,8 @@ public final class WaitingRoomController {
     private AutoCloseable gameSubscription;
     private boolean ready;
     private boolean gameOpened;
+    private boolean navigationFailed;
+    private boolean leaving;
 
     @FXML
     private void initialize() {
@@ -57,12 +59,27 @@ public final class WaitingRoomController {
         readyButton.setManaged(!session.owner());
         roomSubscription = session.observe(session.currentRoom().orElseThrow().roomId(),
                 snapshot -> runOnFx(() -> renderRoom(snapshot)));
-        gameSubscription = session.observeGame(snapshot -> runOnFx(() -> {
-            if (gameOpened) return;
-            gameOpened = true;
-            closeSubscriptions();
-            AppNavigator.game();
+        gameSubscription = session.observeGame(snapshot -> Platform.runLater(() -> {
+            if (!navigationFailed) openGame();
         }));
+    }
+
+    private void openGame() {
+        if (gameOpened || leaving) return;
+        gameOpened = true;
+        try {
+            AppNavigator.game();
+            closeSubscriptions();
+        } catch (RuntimeException error) {
+            gameOpened = false;
+            navigationFailed = true;
+            error.printStackTrace();
+            startButton.setText("重新进入牌局 ›");
+            readyButton.setText("重新进入牌局 ›");
+            startButton.setDisable(false);
+            readyButton.setDisable(false);
+            roomStatusLabel.setText("牌桌加载失败，请点击重新进入：" + rootMessage(error));
+        }
     }
 
     private void initializeDemo() {
@@ -83,6 +100,7 @@ public final class WaitingRoomController {
 
     @FXML
     private void toggleReady() {
+        if (lanSession != null && lanSession.currentGame().isPresent()) { openGame(); return; }
         if (lanSession == null) {
             ready = !ready;
             DemoSession.setLocalReady(ready);
@@ -123,6 +141,11 @@ public final class WaitingRoomController {
             return;
         }
         RoomSnapshot room = lanSession.currentRoom().orElseThrow();
+        if (lanSession.currentGame().isPresent()) { openGame(); return; }
+        if (room.status() == RoomStatus.PLAYING) {
+            roomStatusLabel.setText("牌局已创建，正在等待牌桌数据…");
+            return;
+        }
         if (!allReady(room)) {
             roomStatusLabel.setText("必须四位玩家全部在线并准备");
             return;
@@ -131,6 +154,7 @@ public final class WaitingRoomController {
         roomStatusLabel.setText("正在由房主服务器创建牌局…");
         lanSession.start(room.roomId(), lanSession.localPlayer().id())
                 .whenComplete((gameId, error) -> runOnFx(() -> {
+                    if (gameOpened || leaving) return;
                     if (error != null) {
                         startButton.setDisable(false);
                         roomStatusLabel.setText(rootMessage(error));
@@ -140,6 +164,7 @@ public final class WaitingRoomController {
 
     @FXML
     private void leaveRoom() {
+        leaving = true;
         closeSubscriptions();
         if (lanSession == null) {
             AppNavigator.home();
@@ -190,6 +215,15 @@ public final class WaitingRoomController {
         roomProgress.setProgress(connected / 4.0);
         readyButton.setText(ready ? "已准备" : "准备");
         startButton.setDisable(!allReady(room));
+        if (room.status() == RoomStatus.PLAYING) {
+            boolean received = lanSession.currentGame().isPresent();
+            startButton.setText("进入牌局 ›");
+            readyButton.setText("进入牌局 ›");
+            startButton.setDisable(!received);
+            readyButton.setDisable(!received);
+            roomStatusLabel.setText(received ? "牌局已开始，点击进入牌桌" : "牌局已创建，正在等待牌桌数据…");
+            return;
+        }
         if (room.status() == RoomStatus.CLOSED) {
             roomStatusLabel.setText("房主已关闭房间");
         } else if (lanSession.owner()) {
