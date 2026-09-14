@@ -10,6 +10,7 @@ module com.campus.mahjong.contracts {
     exports com.campus.mahjong.model.common;
     exports com.campus.mahjong.model.event;
     exports com.campus.mahjong.model.game;
+    exports com.campus.mahjong.model.ai;
     exports com.campus.mahjong.model.rule;
     exports com.campus.mahjong.model.rule.region;
     exports com.campus.mahjong.model.service.game;

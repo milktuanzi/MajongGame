@@ -38,7 +38,7 @@ public final class InMemoryGameSessionService implements GameSessionService {
 
     @Override
     public CompletionStage<GameSnapshot> snapshot(GameId gameId, PlayerId viewer) {
-        try { return CompletableFuture.completedFuture(snapshot(require(gameId), viewer)); }
+        try { Context c = require(gameId); synchronized (c) { return CompletableFuture.completedFuture(snapshot(c, viewer)); } }
         catch (RuntimeException exception) { return CompletableFuture.failedFuture(exception); }
     }
 
@@ -108,7 +108,9 @@ public final class InMemoryGameSessionService implements GameSessionService {
         for (Seat seat : Seat.values()) {
             List<Tile> discardTiles = round.discards(seat).stream().map(tile -> new Tile(tile.displayName())).toList();
             List<List<Tile>> groups = round.melds(seat).stream()
-                    .map(meld -> meld.tiles().stream().map(tile -> new Tile(tile.displayName())).toList()).toList();
+                    .map(meld -> meld.type() == PlayerActionType.GANG && meld.fromSeat() == seat && seat != viewerSeat
+                            ? java.util.Collections.nCopies(4, new Tile("暗牌"))
+                            : meld.tiles().stream().map(tile -> new Tile(tile.displayName())).toList()).toList();
             players.add(new PlayerPublicState(context.players.get(seat), seat, round.hand(seat).size(),
                     discardTiles, groups, context.match.scores().get(seat), true));
         }

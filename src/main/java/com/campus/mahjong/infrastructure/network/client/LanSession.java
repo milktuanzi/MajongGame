@@ -36,6 +36,28 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
     private volatile FriendRoomAccess access;
     private volatile RoomSnapshot room;
     private volatile GameSnapshot game;
+    private final java.util.LinkedHashMap<String, com.campus.mahjong.model.ai.TeacherLesson> teacherHistory = new java.util.LinkedHashMap<>();
+    private final CopyOnWriteArrayList<Consumer<com.campus.mahjong.model.ai.TeacherLesson>> teacherListeners = new CopyOnWriteArrayList<>();
+
+    public synchronized List<com.campus.mahjong.model.ai.TeacherLesson> teacherHistory() { return List.copyOf(teacherHistory.values()); }
+    public AutoCloseable observeTeacher(Consumer<com.campus.mahjong.model.ai.TeacherLesson> listener) {
+        teacherListeners.add(listener); return () -> teacherListeners.remove(listener);
+    }
+    private void receiveLesson(com.campus.mahjong.model.ai.TeacherLesson lesson) {
+        synchronized (this) {
+            teacherHistory.put(lesson.id(), lesson);
+            while (teacherHistory.size() > 100) teacherHistory.remove(teacherHistory.keySet().iterator().next());
+        }
+        teacherListeners.forEach(listener -> listener.accept(lesson));
+    }
+    public CompletionStage<RoomSnapshot> addBot() {
+        return response(client.request(MessageType.ADD_BOT, requireRoom().roomId().value(), localPlayer.id().value(),
+                requireRoom().revision(), "")).thenApply(result -> { updateRoom(result.room()); return result.room(); });
+    }
+    public CompletionStage<RoomSnapshot> removeBot(Seat seat) {
+        return response(client.request(MessageType.REMOVE_BOT, requireRoom().roomId().value(), localPlayer.id().value(),
+                requireRoom().revision(), new Payloads.BotSeat(seat))).thenApply(result -> { updateRoom(result.room()); return result.room(); });
+    }
 
     private LanSession(PlayerProfile localPlayer, boolean owner, String serverAddress,
                        GameNetworkClient client, GameServer ownedServer) {
@@ -54,8 +76,14 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
     /** 指定 0 端口可用于本机多客户端集成测试。 */
     public static CompletionStage<LanSession> host(PlayerProfile player, FriendRoomSettings settings,
                                                    int port, String advertisedHost) {
+        return host(player, settings, port, advertisedHost, new com.campus.mahjong.model.ai.MockTeacherExplanationProvider());
+    }
+
+    /** 讲解端口注入；将来可替换为异步 HTTP 适配器，默认仍为本地 Mock。 */
+    public static CompletionStage<LanSession> host(PlayerProfile player, FriendRoomSettings settings,
+            int port, String advertisedHost, com.campus.mahjong.model.ai.TeacherExplanationProvider provider) {
         return virtualTask(() -> {
-            GameServer server = GameServer.open(port);
+            GameServer server = GameServer.open(port, provider);
             GameNetworkClient client = null;
             try {
                 client = GameNetworkClient.connect("127.0.0.1", server.port());
@@ -237,6 +265,7 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
 
     private void onMessage(MessageEnvelope envelope) {
         switch (envelope.messageType()) {
+            case TEACHER_LESSON -> receiveLesson(JsonMessageCodec.value(envelope.payload(), com.campus.mahjong.model.ai.TeacherLesson.class));
             case ROOM_SNAPSHOT -> updateRoom(JsonMessageCodec.value(envelope.payload(), RoomSnapshot.class));
             case GAME_SNAPSHOT -> {
                 game = JsonMessageCodec.value(envelope.payload(), GameSnapshot.class);

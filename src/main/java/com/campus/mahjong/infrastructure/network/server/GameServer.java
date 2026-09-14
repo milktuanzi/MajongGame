@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /** 房主进程内的临时 TCP 服务端。 */
 public final class GameServer implements AutoCloseable {
     private final ServerSocket serverSocket;
-    private final RoomManager rooms = new RoomManager(new InMemoryGameSessionService());
+    private final RoomManager rooms;
     private final Set<ClientConnection> connections = ConcurrentHashMap.newKeySet();
     private final Thread acceptThread;
     private final java.util.concurrent.ScheduledExecutorService timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(task -> {
@@ -20,7 +20,8 @@ public final class GameServer implements AutoCloseable {
     });
     private volatile boolean running = true;
 
-    private GameServer(int port) throws IOException {
+    private GameServer(int port, com.campus.mahjong.model.ai.TeacherExplanationProvider provider) throws IOException {
+        rooms = new RoomManager(new InMemoryGameSessionService(), provider);
         serverSocket = new ServerSocket();
         serverSocket.setReuseAddress(true);
         serverSocket.bind(new InetSocketAddress(port));
@@ -28,7 +29,11 @@ public final class GameServer implements AutoCloseable {
         acceptThread = Thread.ofVirtual().name("mahjong-server-accept").start(this::acceptLoop);
     }
 
-    public static GameServer open(int port) throws IOException { return new GameServer(port); }
+    public static GameServer open(int port) throws IOException { return new GameServer(port, new com.campus.mahjong.model.ai.MockTeacherExplanationProvider()); }
+
+    public static GameServer open(int port, com.campus.mahjong.model.ai.TeacherExplanationProvider provider) throws IOException {
+        return new GameServer(port, provider);
+    }
 
     public int port() { return serverSocket.getLocalPort(); }
 

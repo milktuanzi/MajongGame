@@ -44,6 +44,7 @@ public final class HomeController {
     @FXML private Button sichuan;
     @FXML private Button redCenter;
     @FXML private Button createButton;
+    @FXML private Button teachingButton;
     @FXML private Button joinButton;
 
     private final Map<String, ModeCode> modes = Map.of(
@@ -98,6 +99,17 @@ public final class HomeController {
         FriendRoomSettings settings = new FriendRoomSettings(selectedMode,
                 number(multiplierBox.getValue()), scoreCap(), number(roundsBox.getValue()), false, "");
         connect(LanSession.host(player, settings), "正在启动房主服务器…");
+    }
+
+    @FXML private void startTeaching() {
+        if (!validNickname()) return;
+        var settings = new FriendRoomSettings(selectedMode, number(multiplierBox.getValue()),
+                scoreCap(), 1, false, "", true);
+        connect(LanSession.host(savePlayer(), settings).thenCompose(session ->
+                session.addBot().thenCompose(room -> session.addBot())
+                        .thenCompose(room -> session.addBot()).thenApply(room -> session)
+                        .whenComplete((result, error) -> { if (error != null) session.close(); })),
+                "正在安排三位老师入座…");
     }
 
     @FXML
@@ -231,6 +243,7 @@ public final class HomeController {
 
     private void setBusy(boolean busy) {
         createButton.setDisable(busy);
+        teachingButton.setDisable(busy);
         joinButton.setDisable(busy);
     }
 

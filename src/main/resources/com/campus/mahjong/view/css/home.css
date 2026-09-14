@@ -307,3 +307,7 @@
 .winning-tile-caption { -fx-font-size: 13px; -fx-text-fill: #705322; -fx-background-color: #fff3cc; -fx-background-radius: 8; -fx-padding: 3 8; }
 .win-score-delta { -fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #08764c; -fx-background-color: #e5fff1; -fx-background-radius: 12; }
 .win-score-delta:negative { -fx-text-fill: #be4437; -fx-background-color: #fff0df; }
+
+.teacher-strip { -fx-background-color: #f5f8ef; -fx-padding: 10 24; -fx-border-color: #b8cbb6 transparent transparent transparent; -fx-spacing: 16; }
+.teacher-title { -fx-text-fill: #245538; -fx-font-size: 14; -fx-font-weight: bold; }
+.teacher-summary { -fx-text-fill: #374a3e; -fx-font-size: 13; }

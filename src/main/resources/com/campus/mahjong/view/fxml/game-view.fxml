@@ -79,5 +79,16 @@
                 </Button>
             </StackPane>
         </center>
+        <bottom>
+            <HBox spacing="16" alignment="CENTER_LEFT" styleClass="teacher-strip">
+                <VBox fx:id="teacherContent" spacing="4" HBox.hgrow="ALWAYS" minWidth="0">
+                    <Label fx:id="teachingHint" wrapText="true" maxWidth="Infinity" styleClass="teacher-title"/>
+                    <Label fx:id="teacherTitle" text="机器人老师 · 本地模拟" styleClass="teacher-title"/>
+                    <Label fx:id="teacherSummary" text="在等待房添加老师后，每次出牌都会在这里说明依据。" wrapText="true" maxWidth="Infinity" styleClass="teacher-summary"/>
+                </VBox>
+                <CheckBox fx:id="textExplanations" text="文字讲解" selected="true" minWidth="90"/>
+                <Button fx:id="teacherHistoryButton" text="依据与历史" minWidth="116" onAction="#showTeacherHistory" styleClass="secondary-button"/>
+            </HBox>
+        </bottom>
     </BorderPane>
 </StackPane>

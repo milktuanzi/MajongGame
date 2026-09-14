@@ -23,6 +23,8 @@
                     <Label fx:id="playerCountLabel" styleClass="section-subtitle"/>
                     <ProgressBar fx:id="roomProgress" progress="0" maxWidth="Infinity" styleClass="room-progress"/>
                     <HBox alignment="CENTER" spacing="12"><Button fx:id="readyButton" text="准备" onAction="#toggleReady" styleClass="secondary-button"/><Button fx:id="startButton" text="房主开始游戏  ›" onAction="#startGame" styleClass="primary-button"/></HBox>
+                    <HBox alignment="CENTER" spacing="12"><Button fx:id="addBotButton" text="添加机器人老师" onAction="#addTeacher" styleClass="secondary-button"/><Button fx:id="removeBotButton" text="移除最后一位老师" onAction="#removeTeacher" styleClass="ghost-button"/></HBox>
+                    <Label text="老师每次出牌会给出依据。当前使用本地模拟讲解，不调用付费服务。" styleClass="privacy-tip" wrapText="true"/>
                     <Label text="所有玩家到齐且准备完成后，房主即可开始。席位与准备状态由房主服务器实时广播。" styleClass="privacy-tip" wrapText="true"/>
                 </VBox>
             </VBox>

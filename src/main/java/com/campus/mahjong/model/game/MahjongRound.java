@@ -200,6 +200,12 @@ public final class MahjongRound {
         return true;
     }
 
+    public boolean expireClaims(long nowMillis) {
+        if (phase != RoundPhase.WAITING_FOR_CLAIMS || nowMillis < actionStartedAtMillis + 10_000) return false;
+        passRemainingClaims();
+        return true;
+    }
+
     private boolean canWin(Seat seat, List<TileType> tiles) {
         return tiles.stream().noneMatch(tile -> isMissingTile(seat, tile))
                 && melds.get(seat).stream().flatMap(meld -> meld.tiles().stream()).noneMatch(tile -> isMissingTile(seat, tile))
@@ -243,7 +249,7 @@ public final class MahjongRound {
         }
         if (phase == RoundPhase.WAITING_FOR_DISCARD && seat == currentTurn) {
             actions.add(PlayerActionType.DISCARD);
-            if (canWin(seat, hand(seat))) actions.add(PlayerActionType.HU);
+            if (drawnTiles.containsKey(seat) && canWin(seat, hand(seat))) actions.add(PlayerActionType.HU);
             if (hasConcealedGang(seat) || hasSupplementalGang(seat)) actions.add(PlayerActionType.GANG);
         } else if (phase == RoundPhase.WAITING_FOR_CLAIMS && seat != lastDiscarder) {
             if (isMissingTile(seat, lastDiscard)) return actions;

@@ -38,7 +38,7 @@
       <HBox spacing="12" alignment="CENTER_LEFT"><Label text="03" styleClass="lobby-rank-index"/><Label fx:id="rank3Name" styleClass="lobby-rank-name"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="rank3Score" styleClass="lobby-rank-score"/></HBox>
      </VBox>
     </VBox>
-    <VBox spacing="12" minWidth="330" prefWidth="380" maxWidth="400" maxHeight="620" styleClass="lobby-room-panel">
+    <VBox spacing="12" minWidth="330" prefWidth="380" maxWidth="400" maxHeight="700" styleClass="lobby-room-panel">
      <HBox alignment="CENTER_LEFT"><Label text="开一桌好牌" styleClass="lobby-form-title"/><Region HBox.hgrow="ALWAYS"/><Label text="4 人局" styleClass="lobby-selection"/></HBox>
      <Label text="你来定规则，好友来赴约。" styleClass="lobby-muted"/>
      <VBox spacing="7"><Label text="怎么称呼你" styleClass="lobby-field-label"/><TextField fx:id="nicknameField" promptText="输入你的牌桌昵称" styleClass="lobby-input"/></VBox>
@@ -47,6 +47,8 @@
       <VBox spacing="7" GridPane.columnIndex="1"><Label text="基础倍率" styleClass="lobby-field-label"/><ComboBox fx:id="multiplierBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
       <VBox spacing="7" GridPane.rowIndex="1" GridPane.columnSpan="2"><Label text="积分封顶" styleClass="lobby-field-label"/><ComboBox fx:id="scoreCapBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
      </GridPane>
+     <Button fx:id="teachingButton" text="开始教学 · 三位老师陪练" onAction="#startTeaching" maxWidth="Infinity" styleClass="secondary-button"/>
+     <Label text="所选玩法练习一轮 · 操作建议与点评 · 不计入排行榜" wrapText="true"/>
      <Button fx:id="createButton" text="创建好友房   →" onAction="#createRoom" maxWidth="Infinity" styleClass="lobby-create"/>
      <Label text="创建后复制邀请地址，发给同一网络中的好友。" wrapText="true" styleClass="lobby-muted"/>
      <Separator/>

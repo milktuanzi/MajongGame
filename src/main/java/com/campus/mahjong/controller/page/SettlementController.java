@@ -98,6 +98,12 @@ public final class SettlementController {
     }
 
     private void persist(String matchId, String roomCode, ModeCode mode, int rounds) {
+        if (LanSession.current().flatMap(LanSession::currentRoom)
+                .map(room -> room.settings().map(FriendRoomSettings::teachingMode).orElse(false)
+                        || room.players().stream().anyMatch(RoomPlayer::bot)).orElse(false)) {
+            saveStatus.setText("教学练习场：本场排名与流水可查看，不计入好友长期积分。");
+            return;
+        }
         try {
             for (int round = 1; round <= rounds; round++) {
                 int number = round;

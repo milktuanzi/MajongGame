@@ -32,6 +32,8 @@ public final class WaitingRoomController {
     @FXML private ProgressBar roomProgress;
     @FXML private Button startButton;
     @FXML private Button readyButton;
+    @FXML private Button addBotButton;
+    @FXML private Button removeBotButton;
     @FXML private Label roomStatusLabel;
 
     private final Map<ModeCode, String> modeNames = Map.of(
@@ -82,6 +84,8 @@ public final class WaitingRoomController {
     }
 
     private void initializeDemo() {
+        addBotButton.setVisible(false); addBotButton.setManaged(false);
+        removeBotButton.setVisible(false); removeBotButton.setManaged(false);
         roomCodeLabel.setText(DemoSession.roomCode);
         invitationLabel.setText("");
         String cap = DemoSession.scoreCap.equals("不封顶") ? "不封顶" : DemoSession.scoreCap + "封顶";
@@ -95,6 +99,23 @@ public final class WaitingRoomController {
         readyButton.setManaged(!DemoSession.owner);
         ready = DemoSession.owner;
         updateDemoControls();
+    }
+
+    @FXML private void addTeacher() {
+        if (lanSession == null) return;
+        addBotButton.setDisable(true);
+        lanSession.addBot().whenComplete((room, error) -> runOnFx(() -> {
+            if (error != null) { renderRoom(lanSession.currentRoom().orElseThrow()); roomStatusLabel.setText(rootMessage(error)); }
+        }));
+    }
+    @FXML private void removeTeacher() {
+        if (lanSession == null) return;
+        var bot = lanSession.currentRoom().orElseThrow().players().stream().filter(RoomPlayer::bot).reduce((a,b) -> b);
+        if (bot.isEmpty()) return;
+        removeBotButton.setDisable(true);
+        lanSession.removeBot(bot.get().seat()).whenComplete((room, error) -> runOnFx(() -> {
+            if (error != null) { renderRoom(lanSession.currentRoom().orElseThrow()); roomStatusLabel.setText(rootMessage(error)); }
+        }));
     }
 
     @FXML
@@ -183,11 +204,16 @@ public final class WaitingRoomController {
     }
 
     private void renderRoom(RoomSnapshot room) {
+        boolean editable = lanSession.owner() && room.status() == RoomStatus.WAITING;
+        addBotButton.setVisible(lanSession.owner()); addBotButton.setManaged(lanSession.owner());
+        removeBotButton.setVisible(lanSession.owner()); removeBotButton.setManaged(lanSession.owner());
+        addBotButton.setDisable(!editable || room.players().size() >= 4);
+        removeBotButton.setDisable(!editable || room.players().stream().noneMatch(RoomPlayer::bot));
         roomCodeLabel.setText(lanSession.roomCode());
         invitationLabel.setText(lanSession.invitation());
         FriendRoomSettings settings = room.settings().orElseThrow();
         String cap = settings.scoreCap().map(value -> value + " 分封顶").orElse("不封顶");
-        settingsLabel.setText(modeNames.get(settings.mode()) + " · " + settings.rounds() + " 轮 · "
+        settingsLabel.setText((settings.teachingMode() ? "教学陪练 · " : "") + modeNames.get(settings.mode()) + " · " + settings.rounds() + " 轮 · "
                 + settings.baseMultiplier() + " 倍 · " + cap);
 
         var players = room.players().stream().sorted(Comparator.comparing(RoomPlayer::seat)).toList();
@@ -198,7 +224,7 @@ public final class WaitingRoomController {
                 RoomPlayer player = players.get(index);
                 boolean me = player.profile().id().equals(lanSession.localPlayer().id());
                 names[index].setText(player.profile().nickname() + (me ? "（我）" : ""));
-                String status = !player.connected() ? "已断线" : player.ready() ? "已准备" : "未准备";
+                String status = player.bot() ? "机器人老师 · 已准备" : !player.connected() ? "已断线" : player.ready() ? "已准备" : "未准备";
                 statuses[index].setText(status);
                 statuses[index].getStyleClass().setAll(player.connected() && player.ready()
                         ? "ready-text" : "waiting-text");
@@ -210,7 +236,7 @@ public final class WaitingRoomController {
             }
         }
         long connected = players.stream().filter(RoomPlayer::connected).count();
-        playerCountLabel.setText(connected + "/4 位玩家已连接 · revision " + room.revision());
+        playerCountLabel.setText(connected + "/4 个席位已就绪");
         roomProgress.setProgress(connected / 4.0);
         readyButton.setText(ready ? "已准备" : "准备");
         startButton.setDisable(!allReady(room));

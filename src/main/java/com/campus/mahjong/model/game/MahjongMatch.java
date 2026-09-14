@@ -36,7 +36,7 @@ public final class MahjongMatch {
 
     public boolean expireTimedActions(long nowMillis) {
         if (finished) return false;
-        boolean changed = round.expireExchange(nowMillis) || round.expireMissingSuitSelection(nowMillis) || round.expireDiscard(nowMillis);
+        boolean changed = round.expireExchange(nowMillis) || round.expireMissingSuitSelection(nowMillis) || round.expireDiscard(nowMillis) || round.expireClaims(nowMillis);
         if (changed) synchronizeRound();
         return changed;
     }

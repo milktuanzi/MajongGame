@@ -48,7 +48,11 @@ public final class MahjongTypes {
 
     public record FriendRoomSettings(ModeCode mode, int baseMultiplier,
                                      Optional<Integer> scoreCap, int rounds,
-                                     boolean allowSpectators, String password) {
+                                     boolean allowSpectators, String password, boolean teachingMode) {
+        public FriendRoomSettings(ModeCode mode, int baseMultiplier, Optional<Integer> scoreCap,
+                                  int rounds, boolean allowSpectators, String password) {
+            this(mode, baseMultiplier, scoreCap, rounds, allowSpectators, password, false);
+        }
         public FriendRoomSettings {
             Objects.requireNonNull(mode); Objects.requireNonNull(scoreCap);
             password = password == null ? "" : password;
@@ -86,7 +90,11 @@ public final class MahjongTypes {
     }
 
     public record RoomPlayer(PlayerProfile profile, Seat seat, boolean owner, boolean ready,
-                             boolean connected) {}
+                             boolean connected, boolean bot) {
+        public RoomPlayer(PlayerProfile profile, Seat seat, boolean owner, boolean ready, boolean connected) {
+            this(profile, seat, owner, ready, connected, false);
+        }
+    }
     public record Tile(String code) { public Tile { requireText(code, "tile code"); } }
 
     public record GameSnapshot(GameId gameId, RoomId roomId, GameStatus status,
