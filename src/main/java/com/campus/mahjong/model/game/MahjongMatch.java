@@ -13,6 +13,8 @@ public final class MahjongMatch {
     private boolean finished;
     private long revisionOffset;
     private final List<ScoreEntry> ledger = new ArrayList<>();
+    private final List<WinEvent> winEvents = new ArrayList<>();
+    public List<WinEvent> winEvents() { return List.copyOf(winEvents); }
     private final EnumMap<Seat, Long> scores = new EnumMap<>(Seat.class);
 
     public MahjongMatch(FriendRoomSettings settings, long seed, int firstRound) {
@@ -72,11 +74,15 @@ public final class MahjongMatch {
         List<RoundOutcome> wins = round.wins();
         while (recordedWins < wins.size()) {
             RoundOutcome win = wins.get(recordedWins++);
+            WinEvent detail = round.winDetails().get(recordedWins - 1);
+            winEvents.add(new WinEvent(winEvents.size() + 1, roundNumber, detail.winner(), detail.tile(),
+                    detail.selfDraw(), detail.fan(), detail.patterns(), detail.scoreChanges()));
             Seat winner = win.winner().orElseThrow();
             for (Seat payer : Seat.values()) {
                 long change = win.scoreChanges().getOrDefault(payer, 0L);
                 if (change < 0) ledger.add(new ScoreEntry(ledger.size() + 1, roundNumber,
-                        Optional.of(payer), Optional.of(winner), -change, win.reason(), win.patterns()));
+                        Optional.of(payer), Optional.of(winner), -change, win.reason(),
+                        java.util.stream.Stream.concat(win.patterns().stream(), java.util.stream.Stream.of(detail.fan() + "番")).toList()));
             }
             win.scoreChanges().forEach((seat, delta) -> scores.merge(seat, delta, Long::sum));
         }

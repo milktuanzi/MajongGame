@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.Group?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import com.campus.mahjong.view.component.PlayerInfoView?>
@@ -13,6 +14,7 @@
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label fx:id="scoreLabel" styleClass="score-chip"/>
                 <Label fx:id="wallLabel" styleClass="wall-chip"/>
+                <Button text="番型计分" onAction="#showFanRules" styleClass="ghost-button"/>
                 <CheckBox fx:id="reducedMotion" text="简化动效" styleClass="motion-toggle"/>
                 <Button text="返回首页" onAction="#returnHome" styleClass="ghost-button"/>
             </HBox>
@@ -49,13 +51,12 @@
                     <PlayerInfoView fx:id="leftPlayerLabel"/>
                     <PlayerInfoView fx:id="playerLabel"/>
                 </Pane>
-                    <VBox fx:id="localDock" maxWidth="1080" maxHeight="164" prefWidth="1080" alignment="BOTTOM_CENTER" spacing="4" styleClass="local-table-dock" StackPane.alignment="BOTTOM_CENTER" pickOnBounds="false">
-                        <HBox alignment="CENTER" spacing="18">
+                    <VBox fx:id="localDock" minHeight="192" prefHeight="192" maxHeight="192" maxWidth="1080" prefWidth="1080" alignment="BOTTOM_CENTER" spacing="4" styleClass="local-table-dock" StackPane.alignment="BOTTOM_CENTER" pickOnBounds="false">
+                        <HBox alignment="CENTER" spacing="18" minHeight="40" prefHeight="40" maxHeight="40">
                             <Label fx:id="actionTip" styleClass="turn-tip" maxWidth="820" wrapText="true"/>
                             <Label fx:id="selectedTileLabel" text="尚未选牌" styleClass="selected-tile-label"/>
                         </HBox>
-                        <HBox fx:id="handPane" alignment="CENTER" spacing="5"/>
-                        <HBox alignment="CENTER" spacing="10">
+                        <HBox fx:id="actionBar" alignment="CENTER" spacing="10" minHeight="44" prefHeight="44" maxHeight="44">
                             <Button fx:id="exchangeButton" text="确认换三张" onAction="#confirmExchange" styleClass="action-button, missing-choice"/>
                             <Button fx:id="missingWanButton" text="缺万" onAction="#chooseMissingWan" styleClass="action-button, missing-choice, missing-wan"/>
                             <Button fx:id="missingPinButton" text="缺筒" onAction="#chooseMissingPin" styleClass="action-button, missing-choice, missing-pin"/>
@@ -65,7 +66,22 @@
                             <Button fx:id="gangButton" text="杠" onAction="#gangAction" styleClass="action-button"/>
                             <Button fx:id="huButton" text="胡" onAction="#winRound" styleClass="primary-button"/>
                         </HBox>
+                        <HBox fx:id="handPane" alignment="BOTTOM_CENTER" spacing="5" minHeight="96" prefHeight="96" maxHeight="96"/>
                     </VBox>
+                <VBox fx:id="tileCounterPanel" visible="false" managed="false" minWidth="400" prefWidth="400" maxWidth="400" maxHeight="-Infinity" spacing="10" styleClass="tile-counter-panel" StackPane.alignment="BOTTOM_RIGHT">
+                    <StackPane.margin><Insets right="16" bottom="120"/></StackPane.margin>
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="记牌 · 未见张数" styleClass="tile-counter-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="收起" onAction="#toggleTileCounter" styleClass="tile-counter-close"/>
+                    </HBox>
+                    <Label text="已扣除自己的手牌、四家弃牌及碰杠牌" styleClass="tile-counter-caption"/>
+                    <VBox fx:id="tileCounterRows" spacing="10"/>
+                    <Label text="包含对手暗手与牌墙中的牌；并非牌墙余量" styleClass="tile-counter-caption"/>
+                </VBox>
+                <Button fx:id="tileCounterButton" text="记牌" onAction="#toggleTileCounter" minWidth="76" minHeight="40" styleClass="tile-counter-button" StackPane.alignment="BOTTOM_RIGHT">
+                    <StackPane.margin><Insets right="16" bottom="16"/></StackPane.margin>
+                </Button>
             </StackPane>
         </center>
     </BorderPane>

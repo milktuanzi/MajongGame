@@ -100,7 +100,8 @@ public final class MahjongTypes {
                                java.util.Set<Seat> missingSuitReady,
                                boolean exchangingTiles, long exchangeDeadline, java.util.Set<Seat> exchangeReady,
                                List<Tile> ownExchangeSelection, List<Tile> receivedExchangeTiles,
-                               Optional<com.campus.mahjong.model.game.ExchangeDirection> exchangeDirection) {
+                               Optional<com.campus.mahjong.model.game.ExchangeDirection> exchangeDirection,
+                               List<com.campus.mahjong.model.game.WinEvent> winEvents) {
         public GameSnapshot {
             players = List.copyOf(players); ownHand = List.copyOf(ownHand);
             winners = java.util.Set.copyOf(winners); ledger = List.copyOf(ledger);
@@ -108,6 +109,7 @@ public final class MahjongTypes {
             exchangeReady = java.util.Set.copyOf(exchangeReady);
             ownExchangeSelection = List.copyOf(ownExchangeSelection); receivedExchangeTiles = List.copyOf(receivedExchangeTiles);
             Objects.requireNonNull(exchangeDirection);
+            winEvents = List.copyOf(winEvents);
             Objects.requireNonNull(drawnTile);
             availableActions = List.copyOf(availableActions);
             if (wallRemaining < 0 || revision < 0) throw new IllegalArgumentException("invalid game snapshot");

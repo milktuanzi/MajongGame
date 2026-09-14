@@ -425,7 +425,13 @@ public final class MahjongRound {
         active.removeAll(winners);
         wins.add(settlementCalculator.win(winner, supplier, selfDraw, settings, patterns, fan, active));
         winners.add(winner);
+        winDetails.add(new WinEvent(winDetails.size() + 1, 0, winner,
+                selfDraw ? drawnTiles.getOrDefault(winner, hand(winner).getLast()) : lastDiscard,
+                selfDraw, fan, patterns, wins.getLast().scoreChanges()));
     }
+
+    private final List<WinEvent> winDetails = new ArrayList<>();
+    public List<WinEvent> winDetails() { return List.copyOf(winDetails); }
 
     private void continueAfterWin(Seat previous) {
         claimResponses.clear();

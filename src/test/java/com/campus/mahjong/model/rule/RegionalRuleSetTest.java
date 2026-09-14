@@ -33,6 +33,9 @@ class RegionalRuleSetTest {
                 TileType.PIN_7, TileType.PIN_8, TileType.PIN_9,
                 TileType.MAN_9, TileType.MAN_9);
         assertTrue(RegionalRules.resolve(ModeCode.RED_CENTER).canWin(hand, List.of()));
+        var analysis = RegionalRules.resolve(ModeCode.RED_CENTER).analyze(hand, List.of());
+        assertEquals(0, analysis.fan());
+        assertEquals(List.of("平胡", "红中赖子×1"), analysis.patterns());
     }
 
     @Test

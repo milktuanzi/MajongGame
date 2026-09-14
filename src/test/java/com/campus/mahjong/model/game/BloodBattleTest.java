@@ -17,6 +17,9 @@ class BloodBattleTest {
         round.declareSelfDraw(Seat.EAST, round.revision());
         assertEquals(Set.of(Seat.EAST), round.winners());
         assertEquals(Seat.SOUTH, round.currentTurn());
+        assertEquals(EAST, round.winDetails().getFirst().tile());
+        assertTrue(round.winDetails().getFirst().selfDraw());
+        assertEquals(round.wins().getFirst().scoreChanges(), round.winDetails().getFirst().scoreChanges());
         assertEquals(RoundPhase.WAITING_FOR_DISCARD, round.phase());
         assertTrue(round.legalActions(Seat.EAST).isEmpty());
         assertThrows(IllegalStateException.class, () -> round.declareSelfDraw(Seat.EAST, round.revision()));
@@ -43,6 +46,9 @@ class BloodBattleTest {
         match.apply(Seat.SOUTH, PlayerActionType.HU, null, revision);
         assertTrue(match.finished());
         assertEquals(3, match.round().wins().size());
+        assertEquals(3, match.winEvents().size());
+        assertTrue(match.winEvents().stream().allMatch(e -> e.tile() == RED && !e.selfDraw()));
+        assertEquals(List.of(1, 2, 3), match.winEvents().stream().map(WinEvent::sequence).toList());
         assertEquals(4, match.ledger().size());
         assertEquals(3, match.ledger().stream().filter(entry -> entry.payer().filter(Seat.EAST::equals).isPresent()).count());
         assertLedgerBalances(match);
@@ -81,6 +87,8 @@ class BloodBattleTest {
         assertEquals(14, match.ledger().size());
         for (Seat seat : Seat.values()) assertEquals(firstRound.get(seat) * 2, match.scores().get(seat));
         match.synchronizeRound(); match.synchronizeRound();
+        assertEquals(6, match.winEvents().size());
+        assertEquals(List.of(1, 1, 1, 2, 2, 2), match.winEvents().stream().map(WinEvent::round).toList());
         assertEquals(14, match.ledger().size());
         assertThrows(IllegalStateException.class, () -> match.apply(Seat.NORTH, PlayerActionType.PASS, null, match.revision()));
         assertLedgerBalances(match);

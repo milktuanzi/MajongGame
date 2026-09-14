@@ -351,6 +351,7 @@ public final class DemoSession {
     }
 
     public static long stateRevision() { return match == null ? 0 : match.revision(); }
+    public static List<com.campus.mahjong.model.game.WinEvent> winEvents() { return match == null ? List.of() : match.winEvents(); }
 
     public static void synchronizeProgress() {
         if (match == null) return;

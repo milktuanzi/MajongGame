@@ -24,8 +24,8 @@ public final class SettlementCalculator {
 
     public RoundOutcome win(Seat winner, Seat supplier, boolean selfDraw,
                             FriendRoomSettings settings, List<String> patterns, int fan, Set<Seat> activeSeats) {
-        if (fan < 1) throw new IllegalArgumentException("fan must be positive");
-        long basePayment = Math.multiplyExact(settings.baseMultiplier(), 8L * fan);
+        if (fan < 0 || fan > 30) throw new IllegalArgumentException("fan must be between 0 and 30");
+        long basePayment = Math.multiplyExact(settings.baseMultiplier(), 10L * (1L << fan));
         long cap = settings.scoreCap().map(Integer::longValue).orElse(Long.MAX_VALUE);
         EnumMap<Seat, Long> changes = zeroChanges();
         if (selfDraw) {
@@ -36,7 +36,7 @@ public final class SettlementCalculator {
                 changes.merge(winner, payment, Long::sum);
             }
         } else {
-            long payment = Math.min(basePayment * 3L, cap);
+            long payment = Math.min(basePayment, cap);
             changes.put(supplier, -payment);
             changes.put(winner, payment);
         }

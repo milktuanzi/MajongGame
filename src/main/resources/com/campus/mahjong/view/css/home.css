@@ -262,9 +262,21 @@
 .local-table-dock { -fx-padding: 0 10 5; -fx-background-color: transparent; }
 .local-table-dock .turn-tip { -fx-background-color: #f5faed; -fx-background-radius: 6; -fx-text-fill: #315740; -fx-font-size: 12; -fx-padding: 4 8; }
 .local-table-dock .selected-tile-label { -fx-text-fill: #244d3b; -fx-background-color: #f5faed; -fx-background-radius: 6; -fx-padding: 4 8; }
+.tile-counter-panel { -fx-background-color: #fff0bd; -fx-opacity: 1; -fx-background-radius: 12; -fx-border-color: #b99545; -fx-border-radius: 12; -fx-padding: 16; }
+.tile-counter-title { -fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #513a14; }
+.tile-counter-caption { -fx-font-size: 12; -fx-text-fill: #665027; }
+.tile-count-number { -fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #31543b; }
+.tile-count-empty { -fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #9b3429; }
+.tile-counter-button, .tile-counter-close { -fx-background-color: #fff0bd; -fx-text-fill: #513a14; -fx-background-radius: 8; -fx-padding: 8 12; }
+.tile-counter-button { -fx-border-color: #b99545; -fx-border-radius: 8; -fx-font-weight: bold; }
+.tile-counter-button:hover, .tile-counter-close:hover { -fx-background-color: #f6dc8e; }
+.tile-counter-button:focused, .tile-counter-close:focused { -fx-border-color: #674813; -fx-border-width: 2; -fx-border-radius: 8; }
 .turn-clock { -fx-background-color: #f2f4db; -fx-border-color: #bc964f; }
 .turn-clock-time { -fx-text-fill: #2c6048; }
 .turn-clock-caption { -fx-text-fill: #456846; }
 .turn-pointer { -fx-text-fill: #70aa86; }
 .turn-pointer:active { -fx-text-fill: #ffe695; -fx-effect: dropshadow(gaussian, #93632c, 5, .3, 0, 0); }
 .turn-clock-time:urgent { -fx-text-fill: #ae382c; }
+.winning-tile-caption { -fx-font-size: 13px; -fx-text-fill: #705322; -fx-background-color: #fff3cc; -fx-background-radius: 8; -fx-padding: 3 8; }
+.win-score-delta { -fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #08764c; -fx-background-color: #e5fff1; -fx-background-radius: 12; }
+.win-score-delta:negative { -fx-text-fill: #be4437; -fx-background-color: #fff0df; }

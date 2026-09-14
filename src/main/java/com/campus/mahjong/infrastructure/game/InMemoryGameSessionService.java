@@ -125,7 +125,7 @@ public final class InMemoryGameSessionService implements GameSessionService {
                         : round.missingSuits(), round.missingSuits().keySet(),
                 round.phase() == RoundPhase.EXCHANGING_TILES, round.exchangeDeadline(), round.exchangeReady(),
                 round.exchangeSelection(viewerSeat).stream().map(tile -> new Tile(tile.displayName())).toList(),
-                round.exchangeReceived(viewerSeat).stream().map(tile -> new Tile(tile.displayName())).toList(), round.exchangeDirection());
+                round.exchangeReceived(viewerSeat).stream().map(tile -> new Tile(tile.displayName())).toList(), round.exchangeDirection(), context.match.winEvents());
     }
 
     private List<ActionOption> actionOptions(MahjongRound round, Seat seat) {

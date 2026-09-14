@@ -18,6 +18,8 @@ public final class PlayerInfoView extends HBox {
     private final Label missing = new Label();
     private final Label score = new Label();
     private final Tooltip tooltip = new Tooltip();
+    private final VBox winningTile = new VBox(3);
+    private final Label scoreDelta = new Label();
 
     public PlayerInfoView() {
         super(8);
@@ -33,8 +35,33 @@ public final class PlayerInfoView extends HBox {
         HBox heading = new HBox(7, name, missing); heading.setAlignment(Pos.CENTER_LEFT);
         VBox identity = new VBox(3, heading, score); identity.setAlignment(Pos.CENTER_LEFT);
         getChildren().addAll(winImage, identity);
+        winningTile.setManaged(false); winningTile.setVisible(false); winningTile.setAlignment(Pos.CENTER);
+        winningTile.setLayoutX(92); winningTile.setLayoutY(80); winningTile.setPrefWidth(116);
+        winningTile.resize(116, 100);
+        scoreDelta.setManaged(false); scoreDelta.setVisible(false); scoreDelta.setPrefSize(300, 36);
+        scoreDelta.setLayoutX(0); scoreDelta.setLayoutY(-38); scoreDelta.setAlignment(Pos.CENTER);
+        scoreDelta.resize(300, 36);
+        scoreDelta.getStyleClass().add("win-score-delta");
+        getChildren().addAll(winningTile, scoreDelta);
         Tooltip.install(this, tooltip);
     }
+
+    public void showWinningTile(com.campus.mahjong.model.game.WinEvent event) {
+        winningTile.getChildren().clear(); winningTile.setVisible(event != null);
+        if (event == null) return;
+        var face = new MahjongTileView(event.tile(), true);
+        var caption = new Label("胡 · " + event.tile().displayName()); caption.getStyleClass().add("winning-tile-caption");
+        winningTile.getChildren().addAll(face, caption);
+        winningTile.setAccessibleText("胡牌张：" + event.tile().displayName());
+        tooltip.setText(tooltip.getText() + "，" + String.join("、", event.patterns()) + " " + event.fan() + " 番");
+    }
+
+    public void showScoreDelta(long delta) {
+        scoreDelta.setText((delta > 0 ? "+" : "") + delta);
+        scoreDelta.setVisible(delta != 0);
+        scoreDelta.pseudoClassStateChanged(PseudoClass.getPseudoClass("negative"), delta < 0);
+    }
+    public void clearScoreDelta() { scoreDelta.setVisible(false); }
 
     public void update(String caption, String missingText, long points, String winType) {
         name.setText(caption);

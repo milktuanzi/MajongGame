@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class HandPatternAnalyzerTest {
     @Test
@@ -16,8 +16,7 @@ class HandPatternAnalyzerTest {
                 TileType.MAN_5, TileType.MAN_5, TileType.MAN_7, TileType.MAN_7,
                 TileType.MAN_9, TileType.MAN_9);
         var analysis = new HandPatternAnalyzer().analyze(hand, List.of());
-        assertTrue(analysis.patterns().contains("七对"));
-        assertTrue(analysis.patterns().contains("清一色"));
-        assertTrue(analysis.fan() >= 8);
+        assertEquals(List.of("清七对"), analysis.patterns());
+        assertEquals(4, analysis.fan());
     }
 }

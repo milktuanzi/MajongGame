@@ -27,11 +27,32 @@ public final class RedCenterRuleSet implements RegionalRuleSet {
 
     @Override public HandPatternAnalyzer.Analysis analyze(List<TileType> concealed, List<Meld> exposed) {
         List<TileType> withoutWildcards = concealed.stream().filter(tile -> tile != TileType.RED).toList();
-        var base = analyzer.analyze(withoutWildcards, exposed);
+        int wildcards = concealed.size() - withoutWildcards.size();
+        var base = bestAssignment(new ArrayList<>(withoutWildcards), exposed, wildcards, 0);
+        if (base == null) throw new IllegalArgumentException("红中手牌不能胡牌");
         List<String> patterns = new ArrayList<>(base.patterns());
         long count = concealed.stream().filter(tile -> tile == TileType.RED).count();
         if (count > 0) patterns.add("红中赖子×" + count);
         if (count == 4) patterns.add("四红中");
         return new HandPatternAnalyzer.Analysis(patterns, base.fan() + (count == 4 ? 2 : 0));
+    }
+
+    private HandPatternAnalyzer.Analysis bestAssignment(ArrayList<TileType> hand, List<Meld> exposed, int left, int start) {
+        if (left == 0) {
+            if (!new SichuanRuleSet().canWin(hand, exposed)) return null;
+            return analyzer.analyze(hand, exposed);
+        }
+        HandPatternAnalyzer.Analysis best = null;
+        for (int i = start; i < 27; i++) {
+            TileType tile = TileType.values()[i];
+            long count = hand.stream().filter(t -> t == tile).count()
+                    + exposed.stream().flatMap(m -> m.tiles().stream()).filter(t -> t == tile).count();
+            if (count >= 4) continue;
+            hand.add(tile);
+            var candidate = bestAssignment(hand, exposed, left - 1, i);
+            hand.removeLast();
+            if (candidate != null && (best == null || candidate.fan() > best.fan())) best = candidate;
+        }
+        return best;
     }
 }
