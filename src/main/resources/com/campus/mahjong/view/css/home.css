@@ -204,6 +204,33 @@
 .lobby-rank-index { -fx-min-width: 28; -fx-text-fill: #60776c; -fx-font-size: 11; }
 .lobby-rank-name { -fx-text-fill: #345748; -fx-font-size: 12; }
 .lobby-rank-score { -fx-text-fill: #275e46; -fx-font-family: "Menlo"; -fx-font-size: 13; -fx-font-weight: bold; }
+
+/* 牌友积分榜：淡黄与青绿的独立视觉层。 */
+.ranking-dialog { -fx-background-color: #edf5dc; -fx-padding: 0; }
+.ranking-dialog > .button-bar { -fx-background-color: rgba(239,246,218,.98); -fx-padding: 9 24; }
+.ranking-dialog > .button-bar .button { -fx-background-color: #2f8065; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 9; -fx-padding: 8 25; }
+.ranking-backdrop { -fx-padding: 38 54; -fx-background-image: url("../image/mahjong-ranking-bg-v1.png"); -fx-background-size: cover; -fx-background-position: center; }
+.ranking-card { -fx-max-width: 610; -fx-padding: 26 30 28; -fx-background-color: rgba(255,253,225,.91); -fx-background-radius: 24; -fx-border-color: rgba(53,132,103,.42); -fx-border-radius: 24; -fx-effect: dropshadow(gaussian, rgba(32,88,68,.25), 30, .2, 0, 9); }
+.ranking-eyebrow { -fx-text-fill: #5d9f83; -fx-font-size: 10; -fx-font-weight: bold; }
+.ranking-title { -fx-text-fill: #245e4d; -fx-font-size: 28; -fx-font-weight: bold; -fx-font-family: "SimSun"; }
+.ranking-subtitle { -fx-text-fill: #779484; -fx-font-size: 11; }
+.ranking-list { -fx-padding: 2 6 8 2; }
+.ranking-row, .ranking-row-top { -fx-padding: 11 16; -fx-background-color: rgba(246,251,225,.94); -fx-background-radius: 13; -fx-border-color: rgba(80,145,117,.18); -fx-border-radius: 13; }
+.ranking-row-top { -fx-background-color: linear-gradient(to right, rgba(255,240,174,.96), rgba(220,244,218,.96)); -fx-border-color: rgba(188,148,59,.35); }
+.ranking-medal { -fx-min-width: 38; -fx-min-height: 38; -fx-alignment: CENTER; -fx-background-radius: 19; -fx-font-weight: bold; }
+.ranking-medal-1 { -fx-background-color: #e7b94f; -fx-text-fill: #fffdf1; }
+.ranking-medal-2 { -fx-background-color: #9fc3b2; -fx-text-fill: #fff; }
+.ranking-medal-3 { -fx-background-color: #d49a61; -fx-text-fill: #fff; }
+.ranking-medal-4 { -fx-background-color: #dcece0; -fx-text-fill: #4e7764; }
+.ranking-player-name { -fx-text-fill: #234f40; -fx-font-size: 15; -fx-font-weight: bold; }
+.ranking-player-detail { -fx-text-fill: #7b9285; -fx-font-size: 10; }
+.ranking-total-score { -fx-text-fill: #247257; -fx-font-family: "Menlo"; -fx-font-size: 20; -fx-font-weight: bold; }
+.ranking-score-unit { -fx-text-fill: #89a194; -fx-font-size: 9; }
+.ranking-scroll, .ranking-scroll > .viewport { -fx-background-color: transparent; -fx-border-color: transparent; }
+.ranking-scroll .scroll-bar:vertical .thumb { -fx-background-color: #8fc6a9; -fx-background-radius: 6; }
+.ranking-empty { -fx-min-height: 260; }
+.ranking-empty-icon { -fx-min-width: 58; -fx-min-height: 66; -fx-alignment: CENTER; -fx-background-color: #fdfbed; -fx-background-radius: 8; -fx-border-color: #8bbca2; -fx-border-radius: 8; -fx-border-width: 1 1 5 1; -fx-text-fill: #2e8060; -fx-font-family: "SimSun"; -fx-font-size: 30; -fx-font-weight: bold; }
+.ranking-empty-copy { -fx-text-fill: #658173; -fx-font-size: 13; -fx-line-spacing: 5; }
 .lobby-room-panel { -fx-background-color: rgba(255,252,239,.94); -fx-background-radius: 18; -fx-padding: 24; -fx-border-color: rgba(111,83,40,.5); -fx-border-radius: 18; -fx-effect: dropshadow(gaussian, rgba(15,33,24,.38), 24, .18, 0, 8); }
 .lobby-form-title { -fx-font-size: 23; -fx-font-weight: bold; -fx-text-fill: #214535; }
 .lobby-field-label { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #365246; }

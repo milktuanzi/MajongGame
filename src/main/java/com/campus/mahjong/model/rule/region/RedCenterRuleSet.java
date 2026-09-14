@@ -34,7 +34,7 @@ public final class RedCenterRuleSet implements RegionalRuleSet {
         long count = concealed.stream().filter(tile -> tile == TileType.RED).count();
         if (count > 0) patterns.add("红中赖子×" + count);
         if (count == 4) patterns.add("四红中");
-        return new HandPatternAnalyzer.Analysis(patterns, base.fan() + (count == 4 ? 2 : 0));
+        return analyzer.addRoots(new HandPatternAnalyzer.Analysis(patterns, base.fan() + (count == 4 ? 2 : 0)), concealed, exposed);
     }
 
     private HandPatternAnalyzer.Analysis bestAssignment(ArrayList<TileType> hand, List<Meld> exposed, int left, int start) {

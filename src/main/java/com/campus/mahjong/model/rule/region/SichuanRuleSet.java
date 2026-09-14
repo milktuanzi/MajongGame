@@ -26,6 +26,6 @@ public final class SichuanRuleSet implements RegionalRuleSet {
 
     @Override public HandPatternAnalyzer.Analysis analyze(List<TileType> concealed, List<Meld> exposed) {
         var base = analyzer.analyze(concealed, exposed);
-        return new HandPatternAnalyzer.Analysis(base.patterns(), base.fan());
+        return analyzer.addRoots(base, concealed, exposed);
     }
 }

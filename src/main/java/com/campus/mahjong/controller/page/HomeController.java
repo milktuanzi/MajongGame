@@ -13,13 +13,14 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.application.Platform;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
 import com.campus.mahjong.view.component.MahjongTileView;
 import com.campus.mahjong.model.game.TileType;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
@@ -162,15 +163,44 @@ public final class HomeController {
 
     @FXML private void showRanking() {
         var rows = LocalDataServices.games().leaderboard(100);
-        Alert ranking = new Alert(Alert.AlertType.INFORMATION);
-        ranking.setTitle("牌友积分榜"); ranking.setHeaderText("本机保存的累计战绩");
-        ListView<String> list = new ListView<>();
+        Dialog<Void> ranking = new Dialog<>();
+        ranking.setTitle("牌友积分榜");
+        ranking.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        ranking.getDialogPane().getStyleClass().add("ranking-dialog");
+        ranking.getDialogPane().getStylesheets().add(Objects.requireNonNull(
+                getClass().getResource("/com/campus/mahjong/view/css/home.css")).toExternalForm());
+        Label eyebrow = new Label("LOCAL MAHJONG CLUB"); eyebrow.getStyleClass().add("ranking-eyebrow");
+        Label title = new Label("牌 友 积 分 榜"); title.getStyleClass().add("ranking-title");
+        Label subtitle = new Label("每一局都被认真记录 · 按累计积分排序"); subtitle.getStyleClass().add("ranking-subtitle");
+        VBox heading = new VBox(5, eyebrow, title, subtitle); heading.setAlignment(javafx.geometry.Pos.CENTER);
+        VBox list = new VBox(9); list.getStyleClass().add("ranking-list");
         for (int i = 0; i < rows.size(); i++) {
             var row = rows.get(i);
-            list.getItems().add(String.format("%02d   %s    %,d 分 · %d 局 · %d 胜", i + 1, row.nickname(), row.totalScore(), row.games(), row.wins()));
+            Label medal = new Label(i < 3 ? List.of("冠", "亚", "季").get(i) : String.format("%02d", i + 1));
+            medal.getStyleClass().addAll("ranking-medal", "ranking-medal-" + Math.min(i + 1, 4));
+            Label name = new Label(row.nickname() + (row.nickname().equals(DemoSession.nickname) ? "  ·  我" : ""));
+            name.getStyleClass().add("ranking-player-name");
+            Label detail = new Label(row.games() + " 局  ·  " + row.wins() + " 胜"); detail.getStyleClass().add("ranking-player-detail");
+            VBox identity = new VBox(2, name, detail);
+            Label score = new Label(String.format("%,d", row.totalScore())); score.getStyleClass().add("ranking-total-score");
+            Label unit = new Label("积分"); unit.getStyleClass().add("ranking-score-unit");
+            VBox scoreBox = new VBox(0, score, unit); scoreBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+            Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
+            HBox item = new HBox(14, medal, identity, spacer, scoreBox); item.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            item.getStyleClass().add(i < 3 ? "ranking-row-top" : "ranking-row"); list.getChildren().add(item);
         }
-        list.setPlaceholder(new Label("还没有战绩，完成第一场好友局后再来看看。"));
-        list.setPrefSize(490, 330); ranking.getDialogPane().setContent(list);
+        if (rows.isEmpty()) {
+            Label emptyIcon = new Label("發"); emptyIcon.getStyleClass().add("ranking-empty-icon");
+            Label empty = new Label("还没有战绩\n完成第一场好友局，就会在这里留下名字");
+            empty.setTextAlignment(javafx.scene.text.TextAlignment.CENTER); empty.getStyleClass().add("ranking-empty-copy");
+            VBox emptyBox = new VBox(12, emptyIcon, empty); emptyBox.setAlignment(javafx.geometry.Pos.CENTER);
+            emptyBox.getStyleClass().add("ranking-empty"); list.getChildren().add(emptyBox);
+        }
+        ScrollPane scroll = new ScrollPane(list); scroll.setFitToWidth(true); scroll.getStyleClass().add("ranking-scroll");
+        scroll.setPrefViewportHeight(390);
+        VBox card = new VBox(22, heading, scroll); card.getStyleClass().add("ranking-card");
+        StackPane backdrop = new StackPane(card); backdrop.getStyleClass().add("ranking-backdrop");
+        ranking.getDialogPane().setContent(backdrop); ranking.getDialogPane().setPrefSize(760, 610);
         ranking.initOwner(nicknameField.getScene().getWindow()); ranking.showAndWait();
     }
 

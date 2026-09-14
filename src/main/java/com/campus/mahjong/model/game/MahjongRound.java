@@ -33,6 +33,7 @@ public final class MahjongRound {
     private final EnumMap<Seat, TileType> drawnTiles = new EnumMap<>(Seat.class);
     private final EnumMap<Seat, List<TileType>> discards = new EnumMap<>(Seat.class);
     private final EnumMap<Seat, List<Meld>> melds = new EnumMap<>(Seat.class);
+    private final EnumMap<Seat, Integer> drawCounts = new EnumMap<>(Seat.class);
     private final EnumMap<Seat, PlayerActionType> claimResponses = new EnumMap<>(Seat.class);
     private Seat currentTurn = Seat.EAST;
     private Seat lastDiscarder;
@@ -41,6 +42,7 @@ public final class MahjongRound {
     private RoundOutcome outcome;
     private final EnumSet<Seat> winners = EnumSet.noneOf(Seat.class);
     private final List<RoundOutcome> wins = new ArrayList<>();
+    private final List<RoundOutcome> gangSettlements = new ArrayList<>();
     private final EnumMap<Seat, TileType.Suit> missingSuits = new EnumMap<>(Seat.class);
     private long missingSuitDeadline;
     public static final long EXCHANGE_TIMEOUT_MILLIS = 15_000;
@@ -51,6 +53,8 @@ public final class MahjongRound {
     private long exchangeDeadline;
     private long revision;
     private long actionStartedAtMillis = System.currentTimeMillis();
+    private Seat replacementDrawSeat;
+    private boolean lastDiscardAfterGang;
 
     private MahjongRound(FriendRoomSettings settings, long randomSeed) {
         this.settings = settings;
@@ -60,6 +64,7 @@ public final class MahjongRound {
             hands.put(seat, new ArrayList<>());
             discards.put(seat, new ArrayList<>());
             melds.put(seat, new ArrayList<>());
+            drawCounts.put(seat, 0);
         }
         List<TileType> shuffled = new ArrayList<>(regionalRule.buildWall());
         Collections.shuffle(shuffled, new Random(randomSeed));
@@ -69,6 +74,7 @@ public final class MahjongRound {
         }
         sortAllHands();
         drawnTiles.put(Seat.EAST, wall.removeFirst());
+        drawCounts.put(Seat.EAST, 1);
         if (settings.mode() == com.campus.mahjong.model.common.MahjongTypes.ModeCode.SICHUAN
                 || settings.mode() == com.campus.mahjong.model.common.MahjongTypes.ModeCode.RED_CENTER) {
             phase = RoundPhase.EXCHANGING_TILES;
@@ -202,6 +208,7 @@ public final class MahjongRound {
 
     public java.util.Set<Seat> winners() { return java.util.Set.copyOf(winners); }
     public List<RoundOutcome> wins() { return List.copyOf(wins); }
+    public List<RoundOutcome> gangSettlements() { return List.copyOf(gangSettlements); }
     public RoundPhase phase() { return phase; }
     public Seat currentTurn() { return currentTurn; }
     public int wallRemaining() { return wall.size(); }
@@ -271,6 +278,8 @@ public final class MahjongRound {
             }
         }
         discards.get(seat).add(tile);
+        lastDiscardAfterGang = replacementDrawSeat == seat;
+        replacementDrawSeat = null;
         lastDiscard = tile;
         lastDiscarder = seat;
         claimResponses.clear();
@@ -300,7 +309,7 @@ public final class MahjongRound {
         requireRevision(expectedRevision);
         if (!legalActions(seat).contains(PlayerActionType.HU)) throw new IllegalStateException("当前手牌不能自摸");
         requirePhase(RoundPhase.WAITING_FOR_DISCARD);
-        var analysis = regionalRule.analyze(hand(seat), melds.get(seat));
+        var analysis = contextualAnalysis(seat, true, regionalRule.analyze(hand(seat), melds.get(seat)));
         recordWin(seat, null, true, analysis.patterns(), analysis.fan());
         continueAfterWin(seat);
     }
@@ -312,7 +321,9 @@ public final class MahjongRound {
         mergeDrawnTile(seat);
         removeCopies(seat, tile, 4);
         melds.get(seat).add(new Meld(PlayerActionType.GANG, List.of(tile, tile, tile, tile), seat));
+        recordGang(seat, null, "暗杠", 1);
         drawFor(seat);
+        replacementDrawSeat = seat;
     }
 
     /** 补杠：已有碰牌组，摸到或持有同牌第四张时将碰升级为杠并补摸。 */
@@ -330,7 +341,9 @@ public final class MahjongRound {
             if (meld.type() == PlayerActionType.PENG && meld.tiles().stream().allMatch(tile::equals)) {
                 playerMelds.set(index, new Meld(PlayerActionType.GANG,
                         List.of(tile, tile, tile, tile), meld.fromSeat()));
+                recordGang(seat, null, "补杠", 0);
                 drawFor(seat);
+                replacementDrawSeat = seat;
                 return;
             }
         }
@@ -370,7 +383,7 @@ public final class MahjongRound {
         for (int distance = 1; distance <= 3; distance++) {
             Seat seat = advance(lastDiscarder, distance);
             if (claimResponses.get(seat) == PlayerActionType.HU) {
-                var analysis = regionalRule.analyze(withLastDiscard(seat), melds.get(seat));
+                var analysis = contextualAnalysis(seat, false, regionalRule.analyze(withLastDiscard(seat), melds.get(seat)));
                 recordWin(seat, lastDiscarder, false, analysis.patterns(), analysis.fan());
                 lastWinner = seat;
             }
@@ -399,11 +412,12 @@ public final class MahjongRound {
         List<TileType> tiles = new ArrayList<>();
         for (int index = 0; index < handCopies + 1; index++) tiles.add(lastDiscard);
         melds.get(claimant).add(new Meld(type, tiles, lastDiscarder));
+        if (type == PlayerActionType.GANG) recordGang(claimant, lastDiscarder, "点杠", 1);
         removeLastDiscardFromTable();
         currentTurn = claimant;
         phase = RoundPhase.WAITING_FOR_DISCARD;
         claimResponses.clear();
-        if (type == PlayerActionType.GANG) drawFor(claimant);
+        if (type == PlayerActionType.GANG) { drawFor(claimant); replacementDrawSeat = claimant; }
         else {
             revision++;
             actionStartedAtMillis = System.currentTimeMillis();
@@ -414,10 +428,33 @@ public final class MahjongRound {
         if (wall.isEmpty()) { finishRound("牌墙耗尽"); return; }
         if (drawnTiles.containsKey(seat)) throw new IllegalStateException("尚有未处理的摸牌");
         drawnTiles.put(seat, wall.removeFirst());
+        drawCounts.merge(seat, 1, Integer::sum);
         phase = RoundPhase.WAITING_FOR_DISCARD;
         claimResponses.clear();
         revision++;
         actionStartedAtMillis = System.currentTimeMillis();
+    }
+
+    private void recordGang(Seat seat, Seat supplier, String kind, int fan) {
+        EnumSet<Seat> active = EnumSet.allOf(Seat.class); active.removeAll(winners);
+        gangSettlements.add(settlementCalculator.gang(seat, supplier, kind, fan, settings, active));
+    }
+
+    private com.campus.mahjong.model.rule.HandPatternAnalyzer.Analysis contextualAnalysis(
+            Seat seat, boolean selfDraw, com.campus.mahjong.model.rule.HandPatternAnalyzer.Analysis base) {
+        List<String> patterns = new ArrayList<>(base.patterns());
+        int fan = base.fan();
+        if (selfDraw) { patterns.add("自摸"); fan++; }
+        if (selfDraw && seat == Seat.EAST && discards.values().stream().mapToInt(List::size).sum() == 0) {
+            patterns.add("天胡"); fan += 5;
+        } else if (selfDraw && seat != Seat.EAST && drawCounts.get(seat) == 1
+                && melds.values().stream().allMatch(List::isEmpty)) {
+            patterns.add("地胡"); fan += 5;
+        }
+        if (selfDraw && wall.isEmpty()) { patterns.add("海底捞月"); fan++; }
+        if (selfDraw && replacementDrawSeat == seat) { patterns.add("杠上开花"); fan++; }
+        if (!selfDraw && lastDiscardAfterGang) { patterns.add("杠上炮"); fan++; }
+        return new com.campus.mahjong.model.rule.HandPatternAnalyzer.Analysis(patterns, fan);
     }
 
     private void recordWin(Seat winner, Seat supplier, boolean selfDraw, List<String> patterns, int fan) {
@@ -444,6 +481,7 @@ public final class MahjongRound {
         EnumMap<Seat, Long> totals = new EnumMap<>(Seat.class);
         for (Seat seat : Seat.values()) totals.put(seat, 0L);
         wins.forEach(win -> win.scoreChanges().forEach((seat, delta) -> totals.merge(seat, delta, Long::sum)));
+        gangSettlements.forEach(gang -> gang.scoreChanges().forEach((seat, delta) -> totals.merge(seat, delta, Long::sum)));
         outcome = new RoundOutcome(Optional.empty(), Optional.empty(), false, reason, List.of(), Map.copyOf(totals));
         phase = RoundPhase.FINISHED;
         claimResponses.clear();

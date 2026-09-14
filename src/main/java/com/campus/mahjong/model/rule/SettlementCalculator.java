@@ -44,6 +44,23 @@ public final class SettlementCalculator {
                 selfDraw ? "自摸" : "点炮", patterns, changes);
     }
 
+    /** 杠牌即时结算：点杠由点杠者单付，暗杠/补杠由其余仍在局玩家各付。 */
+    public RoundOutcome gang(Seat seat, Seat supplier, String kind, int fan,
+                             FriendRoomSettings settings, Set<Seat> activeSeats) {
+        long payment = Math.min(Math.multiplyExact(settings.baseMultiplier(), 10L * (1L << fan)),
+                settings.scoreCap().map(Integer::longValue).orElse(Long.MAX_VALUE));
+        EnumMap<Seat, Long> changes = zeroChanges();
+        if (supplier != null) {
+            changes.put(supplier, -payment); changes.put(seat, payment);
+        } else {
+            for (Seat payer : Seat.values()) if (payer != seat && activeSeats.contains(payer)) {
+                changes.put(payer, -payment); changes.merge(seat, payment, Long::sum);
+            }
+        }
+        return new RoundOutcome(Optional.of(seat), Optional.ofNullable(supplier), false, kind,
+                List.of(kind, fan + "番"), changes);
+    }
+
     private EnumMap<Seat, Long> zeroChanges() {
         EnumMap<Seat, Long> changes = new EnumMap<>(Seat.class);
         for (Seat seat : Seat.values()) changes.put(seat, 0L);

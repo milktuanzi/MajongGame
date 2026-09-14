@@ -61,6 +61,8 @@ class MahjongClaimAndGangTest {
         assertTrue(round.drawnTile(Seat.WEST).isPresent());
         assertEquals(4, round.melds(Seat.WEST).getFirst().tiles().size());
         assertTrue(round.discards(Seat.EAST).isEmpty());
+        assertEquals("点杠", round.gangSettlements().getFirst().reason());
+        assertEquals(1, round.gangSettlements().getFirst().patterns().stream().filter("1番"::equals).count());
         assertConservation(round);
     }
 
@@ -74,6 +76,7 @@ class MahjongClaimAndGangTest {
             assertEquals(82, round.wallRemaining());
             assertEquals(Seat.EAST, round.melds(Seat.EAST).getFirst().fromSeat());
             assertTrue(round.drawnTile(Seat.EAST).isPresent());
+            assertEquals(List.of("暗杠", "1番"), round.gangSettlements().getFirst().patterns());
             if (!fourthDrawn) assertTrue(round.organizedHand(Seat.EAST).contains(GREEN));
             assertConservation(round);
         }
@@ -90,6 +93,7 @@ class MahjongClaimAndGangTest {
             assertEquals(11, round.hand(Seat.EAST).size());
             assertEquals(82, round.wallRemaining());
             if (!fourthDrawn) assertTrue(round.organizedHand(Seat.EAST).contains(GREEN));
+            assertEquals(List.of("补杠", "0番"), round.gangSettlements().getFirst().patterns());
             assertConservation(round);
         }
     }

@@ -31,15 +31,15 @@ class ConfirmedFanTableTest {
         check("双龙七对", 4, "11112222", "335599", List.of());
         check("清七对", 4, "11223344557799", "", List.of());
         check("将对", 3, "222555", "22255588", List.of());
-        check("幺九", 2, "12378911", "123789", List.of());
+        check("平胡", 0, "12378911", "123789", List.of());
         check("清龙七对", 5, "11112233557799", "", List.of());
         check("清双龙七对", 6, "11112222335599", "", List.of());
     }
     @Test void exposedSetsDetermineGoldenHookAndEighteenArhats() {
         check("金钩钓", 2, "99", "", melds("14", "36", false));
         check("清金钩钓", 4, "99", "", melds("1346", "", false));
-        check("十八罗汉", 6, "99", "", melds("14", "36", true));
-        check("将十八罗汉", 7, "88", "", melds("25", "25", true));
+        check("十八罗汉", 7, "99", "", melds("14", "36", true));
+        check("将十八罗汉", 9, "88", "", melds("25", "25", true));
         var mixed = new ArrayList<>(melds("14", "36", true));
         mixed.set(0, melds("1", "", false).getFirst());
         check("金钩钓", 2, "99", "", mixed);

@@ -10,6 +10,7 @@ public final class MahjongMatch {
     private MahjongRound round;
     private int roundNumber;
     private int recordedWins;
+    private int recordedGangs;
     private boolean finished;
     private long revisionOffset;
     private final List<ScoreEntry> ledger = new ArrayList<>();
@@ -71,6 +72,8 @@ public final class MahjongMatch {
     public void synchronizeRound() {
         if (finished) return;
         round.expireMissingSuitSelection(System.currentTimeMillis());
+        List<RoundOutcome> gangs = round.gangSettlements();
+        while (recordedGangs < gangs.size()) recordSettlement(gangs.get(recordedGangs++));
         List<RoundOutcome> wins = round.wins();
         while (recordedWins < wins.size()) {
             RoundOutcome win = wins.get(recordedWins++);
@@ -94,5 +97,16 @@ public final class MahjongMatch {
         roundNumber++;
         round = MahjongRound.start(settings, seed + roundNumber - 1);
         recordedWins = 0;
+        recordedGangs = 0;
+    }
+
+    private void recordSettlement(RoundOutcome settlement) {
+        Seat payee = settlement.winner().orElseThrow();
+        for (Seat payer : Seat.values()) {
+            long change = settlement.scoreChanges().getOrDefault(payer, 0L);
+            if (change < 0) ledger.add(new ScoreEntry(ledger.size() + 1, roundNumber,
+                    Optional.of(payer), Optional.of(payee), -change, settlement.reason(), settlement.patterns()));
+        }
+        settlement.scoreChanges().forEach((seat, delta) -> scores.merge(seat, delta, Long::sum));
     }
 }

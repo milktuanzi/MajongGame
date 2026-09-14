@@ -29,7 +29,6 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.animation.Interpolator;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
@@ -51,8 +50,9 @@ public final class GameController {
     @FXML private Label wallLabel;
     @FXML private PlayerInfoView playerLabel;
     @FXML private Label scoreLabel;
-    @FXML private Label actionTip;
-    @FXML private Label selectedTileLabel;
+    /** 状态文字仍供控制流程复用，但不再作为牌桌上的常驻提示板显示。 */
+    private final Label actionTip = new Label();
+    private final Label selectedTileLabel = new Label();
     @FXML private PlayerInfoView topPlayerLabel;
     @FXML private PlayerInfoView leftPlayerLabel;
     @FXML private PlayerInfoView rightPlayerLabel;
@@ -143,7 +143,7 @@ public final class GameController {
     @FXML private Label topTurnIndicator;
     @FXML private Label leftTurnIndicator;
     private final Timeline turnClock = new Timeline(new KeyFrame(Duration.seconds(1), event -> updateTurnClock()));
-    @FXML private CheckBox reducedMotion;
+    private static final boolean REDUCED_MOTION = false;
     @FXML private Label actionFeedback;
     private javafx.animation.SequentialTransition feedbackAnimation;
     private java.util.Set<Seat> previousWinners = java.util.Set.of();
@@ -267,12 +267,12 @@ public final class GameController {
             return;
         }
         handPane.setMouseTransparent(true);
-        TranslateTransition move = new TranslateTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), selectedView);
-        move.setByY(reducedMotion.isSelected() ? 0 : -90);
+        TranslateTransition move = new TranslateTransition(Duration.millis(REDUCED_MOTION ? 1 : 220), selectedView);
+        move.setByY(REDUCED_MOTION ? 0 : -90);
         move.setInterpolator(Interpolator.EASE_IN);
-        FadeTransition fade = new FadeTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), selectedView);
+        FadeTransition fade = new FadeTransition(Duration.millis(REDUCED_MOTION ? 1 : 220), selectedView);
         fade.setToValue(.1);
-        ScaleTransition scale = new ScaleTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), selectedView);
+        ScaleTransition scale = new ScaleTransition(Duration.millis(REDUCED_MOTION ? 1 : 220), selectedView);
         scale.setToX(.78); scale.setToY(.78);
         String tile = selectedTile;
         boolean isDrawn = selectedIsDrawn;
@@ -466,7 +466,7 @@ public final class GameController {
             handPane.getChildren().add(drawn);
             String key = (lanSession == null ? DemoSession.currentRound() : networkGame.currentRound()) + ":"
                     + (lanSession == null ? DemoSession.remainingTiles() : networkGame.wallRemaining()) + ":" + tileName;
-            if (animateDraw && !key.equals(lastDrawKey) && !reducedMotion.isSelected()) animateDraw(drawn);
+            if (animateDraw && !key.equals(lastDrawKey) && !REDUCED_MOTION) animateDraw(drawn);
             lastDrawKey = key;
         });
 
@@ -522,7 +522,7 @@ public final class GameController {
             tile.setScaleX(.94);
             tile.setScaleY(.94);
             pane.getChildren().add(tile);
-            if (!reducedMotion.isSelected() && previousCount != null && discards.size() > previousCount
+            if (!REDUCED_MOTION && previousCount != null && discards.size() > previousCount
                     && pane.getChildren().size() == discards.size()) {
                 ScaleTransition settle = new ScaleTransition(Duration.millis(170), tile);
                 settle.setFromX(1.08); settle.setFromY(1.08); settle.setToX(.94); settle.setToY(.94);
@@ -553,7 +553,7 @@ public final class GameController {
         tile.setScaleY(1.28);
         tableBoard.getChildren().add(tile);
 
-        double fadeMillis = reducedMotion.isSelected() ? 1 : 140;
+        double fadeMillis = REDUCED_MOTION ? 1 : 140;
         FadeTransition appear = new FadeTransition(Duration.millis(fadeMillis), tile);
         appear.setFromValue(0);
         appear.setToValue(1);
@@ -585,8 +585,6 @@ public final class GameController {
         localDock.setScaleX(handScale); localDock.setScaleY(handScale);
         double tableTop = (height - 1000 * scale) / 2;
         double dockTop = localDock.getHeight() > 0 ? localDock.getBoundsInParent().getMinY() : height - 164;
-        if (actionTip.getScene() != null && actionTip.getHeight() > 0)
-            dockTop = tableViewport.sceneToLocal(actionTip.localToScene(actionTip.getLayoutBounds())).getMinY();
         bottomMeldPane.setLayoutY(Math.min(910, (dockTop - 14 - tableTop) / scale - 44));
     }
 
@@ -628,7 +626,7 @@ public final class GameController {
         if (previous != null && !signature.isEmpty() && !signature.equals(previous)) {
             String latest = ((Group) pane.getChildren().getLast()).getChildren().getFirst().getAccessibleText();
             showActionFeedback(latest.substring(0, 1));
-            if (!reducedMotion.isSelected()) {
+            if (!REDUCED_MOTION) {
                 FadeTransition reveal = new FadeTransition(Duration.millis(200), pane);
                 reveal.setFromValue(.35); reveal.setToValue(1); reveal.play();
             }
@@ -653,9 +651,9 @@ public final class GameController {
     private void showActionFeedback(String text) {
         if (feedbackAnimation != null) feedbackAnimation.stop();
         actionFeedback.setText(text); actionFeedback.setVisible(true);
-        FadeTransition enter = new FadeTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 130), actionFeedback);
+        FadeTransition enter = new FadeTransition(Duration.millis(REDUCED_MOTION ? 1 : 130), actionFeedback);
         enter.setFromValue(0); enter.setToValue(1);
-        FadeTransition leave = new FadeTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 220), actionFeedback);
+        FadeTransition leave = new FadeTransition(Duration.millis(REDUCED_MOTION ? 1 : 220), actionFeedback);
         leave.setFromValue(1); leave.setToValue(0);
         feedbackAnimation = new javafx.animation.SequentialTransition(enter, new PauseTransition(Duration.millis(650)), leave);
         feedbackAnimation.setOnFinished(event -> actionFeedback.setVisible(false));
@@ -773,13 +771,13 @@ public final class GameController {
         if (localGangTiles().contains(tile)) {
             actionTip.setText("该牌可补杠/暗杠；点击“补 / 暗杠”确认，或再次点击该牌打出");
         }
-        TranslateTransition lift = new TranslateTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 130), view);
+        TranslateTransition lift = new TranslateTransition(Duration.millis(REDUCED_MOTION ? 1 : 130), view);
         lift.setInterpolator(Interpolator.EASE_OUT); lift.setToY(-12); lift.play();
     }
 
     private void returnToBase(MahjongTileView tile) {
         tile.setSelectedState(false);
-        TranslateTransition fall = new TranslateTransition(Duration.millis(reducedMotion.isSelected() ? 1 : 140), tile);
+        TranslateTransition fall = new TranslateTransition(Duration.millis(REDUCED_MOTION ? 1 : 140), tile);
         fall.setToY(0);
         fall.play();
     }
