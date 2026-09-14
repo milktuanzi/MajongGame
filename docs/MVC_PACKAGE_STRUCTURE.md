@@ -47,7 +47,7 @@ com.campus.mahjong
 ├─ infrastructure/                   # 技术实现，不属于 MVC 业务层
 │  ├─ config/                       # 运行配置
 │  ├─ network/
-│  │  ├─ client/                    # 网络客户端、心跳、重连
+│  │  ├─ client/                    # 网络客户端与当前会话
 │  │  ├─ server/                    # 好友房服务端与连接会话
 │  │  └─ protocol/                  # 消息类型和编解码
 │  └─ persistence/

@@ -36,11 +36,10 @@ flowchart TB
 
 | 接口 | 责任 |
 |---|---|
-| `FriendRoomService.create` | 房主创建房间，返回房间码、服务地址和重连令牌 |
+| `FriendRoomService.create` | 房主创建房间，返回房间码和服务地址 |
 | `FriendRoomService.joinByInviteCode` | 好友在其他电脑通过房间码加入 |
 | `FriendRoomService.observe` | 实时接收玩家进入、准备、离开和房间配置变化 |
 | `FriendRoomService.setReady/start` | 玩家准备及房主开始牌局 |
-| `FriendRoomService.reconnect` | 断线后凭令牌恢复原座位和房间状态 |
 | `GameSessionService` | 获取牌局快照、合法动作、提交操作和读取结算 |
 | `GameEventBus` | 将服务端房间/牌局事件分发给 JavaFX Controller |
 | `FriendScoreService` | 查询好友累计积分排行和最近共同对局玩家 |
@@ -51,7 +50,7 @@ flowchart TB
 - 服务端是房间、手牌、出牌顺序和结算分数的唯一可信来源。
 - 客户端只能看到自己的暗牌；其他玩家仅同步牌数、弃牌和公开组合。
 - 操作携带 `expectedRevision`，服务端拒绝过期或重复动作。
-- 等待页订阅房间快照，牌局页订阅牌局事件；断线重连后先获取完整快照。
+- 等待页订阅房间快照，牌局页订阅牌局事件，并始终以服务端完整快照刷新界面。
 - 每局结算写入房间积分；全部轮次结束后写入好友累计积分榜。
 
 ## 页面文件

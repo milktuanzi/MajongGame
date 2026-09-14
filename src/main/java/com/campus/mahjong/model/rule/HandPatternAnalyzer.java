@@ -13,7 +13,8 @@ public final class HandPatternAnalyzer {
             + "4番：清金钩钓、将七对；5番：天胡、地胡、清龙七对、三龙七对、将龙七对；\n"
             + "6番：将双龙七对、清双龙七对；7番：十八罗汉、将三龙七对、清三龙七对、九莲宝灯；"
             + "8番：连七对；9番：清十八罗汉、将十八罗汉。门前清不计。\n"
-            + "杠牌即时流水：点杠、暗杠1番，补杠0番。";
+            + "杠牌即时流水：点杠、暗杠1番，补杠0番。\n"
+            + "每份积分 = 10 × 房间倍率 × 番型倍率；封顶仅限制番型倍率。";
 
     public Analysis analyze(List<TileType> concealed, List<Meld> exposed) {
         if (!new StandardHandEvaluator().isWinningHand(concealed, exposed.size()))

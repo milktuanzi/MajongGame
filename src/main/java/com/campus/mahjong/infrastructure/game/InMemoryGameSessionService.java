@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -89,11 +88,6 @@ public final class InMemoryGameSessionService implements GameSessionService {
         } catch (RuntimeException exception) {
             return CompletableFuture.failedFuture(exception);
         }
-    }
-
-    @Override public CompletionStage<Void> reconnect(GameId gameId, PlayerId playerId) {
-        try { require(gameId).seatOf(playerId); return CompletableFuture.completedFuture(null); }
-        catch (RuntimeException exception) { return CompletableFuture.failedFuture(exception); }
     }
 
     private TileType requiredTile(ActionRequest request) {

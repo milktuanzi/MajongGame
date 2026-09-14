@@ -12,11 +12,11 @@ public final class MahjongTypes {
 
     public enum ModeCode { SICHUAN, RED_CENTER }
     public enum RoomKind { FRIEND }
-    public enum RoomStatus { WAITING, READY_CHECK, PLAYING, FINISHED, CLOSED }
-    public enum GameStatus { PREPARING, DEALING, PLAYING, SETTLING, FINISHED, ABORTED }
+    public enum RoomStatus { WAITING, PLAYING, CLOSED }
+    public enum GameStatus { PLAYING, FINISHED }
     public enum Seat { EAST, SOUTH, WEST, NORTH }
-    public enum PlayerActionType { DRAW, DISCARD, PENG, GANG, HU, PASS, READY, DING_QUE, EXCHANGE_THREE }
-    public enum PageId { HOME, FRIEND_ROOM_SETUP, ROOM, GAME, RESULT }
+    public enum PlayerActionType { DISCARD, PENG, GANG, HU, PASS, DING_QUE, EXCHANGE_THREE }
+    public enum PageId { HOME, ROOM, GAME, RESULT }
 
     public record PlayerId(String value) {
         public PlayerId { requireText(value, "playerId"); }

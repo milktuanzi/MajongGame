@@ -9,8 +9,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-/** 统一完成零和计分、基础倍率及封顶处理。 */
+/** 统一完成零和计分、房间倍率及番型倍率封顶处理。 */
 public final class SettlementCalculator {
+    private static final long BASE_SCORE = 10L;
+
     public RoundOutcome draw() {
         EnumMap<Seat, Long> changes = zeroChanges();
         return new RoundOutcome(Optional.empty(), Optional.empty(), false,
@@ -24,19 +26,15 @@ public final class SettlementCalculator {
 
     public RoundOutcome win(Seat winner, Seat supplier, boolean selfDraw,
                             FriendRoomSettings settings, List<String> patterns, int fan, Set<Seat> activeSeats) {
-        if (fan < 0 || fan > 30) throw new IllegalArgumentException("fan must be between 0 and 30");
-        long basePayment = Math.multiplyExact(settings.baseMultiplier(), 10L * (1L << fan));
-        long cap = settings.scoreCap().map(Integer::longValue).orElse(Long.MAX_VALUE);
+        long payment = paymentPerPlayer(settings, fan);
         EnumMap<Seat, Long> changes = zeroChanges();
         if (selfDraw) {
-            long payment = Math.min(basePayment, cap);
             for (Seat seat : Seat.values()) {
                 if (seat == winner || !activeSeats.contains(seat)) continue;
                 changes.put(seat, -payment);
                 changes.merge(winner, payment, Long::sum);
             }
         } else {
-            long payment = Math.min(basePayment, cap);
             changes.put(supplier, -payment);
             changes.put(winner, payment);
         }
@@ -47,8 +45,7 @@ public final class SettlementCalculator {
     /** 杠牌即时结算：点杠由点杠者单付，暗杠/补杠由其余仍在局玩家各付。 */
     public RoundOutcome gang(Seat seat, Seat supplier, String kind, int fan,
                              FriendRoomSettings settings, Set<Seat> activeSeats) {
-        long payment = Math.min(Math.multiplyExact(settings.baseMultiplier(), 10L * (1L << fan)),
-                settings.scoreCap().map(Integer::longValue).orElse(Long.MAX_VALUE));
+        long payment = paymentPerPlayer(settings, fan);
         EnumMap<Seat, Long> changes = zeroChanges();
         if (supplier != null) {
             changes.put(supplier, -payment); changes.put(seat, payment);
@@ -59,6 +56,18 @@ public final class SettlementCalculator {
         }
         return new RoundOutcome(Optional.of(seat), Optional.ofNullable(supplier), false, kind,
                 List.of(kind, fan + "番"), changes);
+    }
+
+    /** 每份积分 = 10 底分 × 房间倍率 × 封顶后的番型倍率。 */
+    private long paymentPerPlayer(FriendRoomSettings settings, int fan) {
+        if (fan < 0 || fan > 30) throw new IllegalArgumentException("fan must be between 0 and 30");
+        long patternMultiplier = 1L << fan;
+        long cappedPatternMultiplier = settings.scoreCap()
+                .map(Integer::longValue)
+                .map(cap -> Math.min(patternMultiplier, cap))
+                .orElse(patternMultiplier);
+        long roomBaseScore = Math.multiplyExact(BASE_SCORE, settings.baseMultiplier());
+        return Math.multiplyExact(roomBaseScore, cappedPatternMultiplier);
     }
 
     private EnumMap<Seat, Long> zeroChanges() {

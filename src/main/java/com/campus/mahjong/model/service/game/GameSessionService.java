@@ -10,5 +10,4 @@ public interface GameSessionService {
     CompletionStage<List<ActionOption>> availableActions(GameId gameId, PlayerId playerId);
     CompletionStage<ActionResult> perform(ActionRequest request);
     CompletionStage<Settlement> latestSettlement(GameId gameId);
-    CompletionStage<Void> reconnect(GameId gameId, PlayerId playerId);
 }

@@ -175,12 +175,6 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
     }
 
     @Override
-    public CompletionStage<RoomSnapshot> updateSettings(RoomId roomId, PlayerId ownerId,
-                                                        FriendRoomSettings settings) {
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("初版暂不支持入房后修改规则"));
-    }
-
-    @Override
     public CompletionStage<Void> leave(RoomId roomId, PlayerId playerId) {
         requireLocal(playerId);
         return response(client.request(MessageType.LEAVE_ROOM, roomId.value(), playerId.value(),
@@ -192,11 +186,6 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
         requireLocal(ownerId);
         return response(client.request(MessageType.START_GAME, roomId.value(), ownerId.value(),
                 requireRoom().revision(), "")).thenApply(result -> new GameId(result.gameId()));
-    }
-
-    @Override
-    public CompletionStage<FriendRoomAccess> reconnect(PlayerId playerId, String reconnectToken) {
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("断线令牌重连将在下一阶段实现"));
     }
 
     @Override
@@ -255,12 +244,6 @@ public final class LanSession implements FriendRoomService, GameSessionService, 
                 0, player.score(), player.score(), java.util.Map.<String, Integer>of())).toList();
         return CompletableFuture.completedFuture(new Settlement(gameId, current.currentRound(), changes,
                 Optional.empty(), "全部轮次结束"));
-    }
-
-    @Override
-    public CompletionStage<Void> reconnect(GameId gameId, PlayerId playerId) {
-        requireLocal(playerId);
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("断线重连将在下一阶段实现"));
     }
 
     private void onMessage(MessageEnvelope envelope) {

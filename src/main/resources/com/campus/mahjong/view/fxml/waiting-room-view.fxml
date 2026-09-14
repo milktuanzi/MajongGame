@@ -29,6 +29,6 @@
                 </VBox>
             </VBox>
         </center>
-        <bottom><HBox alignment="CENTER" styleClass="bottom-bar"><Label text="请保持热点和房主程序运行；初版暂不支持断线恢复。" styleClass="bottom-copy"/></HBox></bottom>
+        <bottom><HBox alignment="CENTER" styleClass="bottom-bar"><Label text="请保持热点和房主程序运行，所有玩家使用同一版本。" styleClass="bottom-copy"/></HBox></bottom>
     </BorderPane>
 </StackPane>

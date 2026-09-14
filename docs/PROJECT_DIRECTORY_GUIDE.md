@@ -97,7 +97,7 @@
 
 业务用例接口层，用“接口”隔离页面和具体实现。
 
-- `service/game/GameSessionService`：牌局快照、可执行操作、操作提交、重连和结算查询。
+- `service/game/GameSessionService`：牌局快照、可执行操作、操作提交和结算查询。
 - `service/mode/GameModeCatalog`：四川麻将、红中麻将模式目录。
 - `service/player/PlayerAccountService`：读取和刷新玩家资料。
 - `service/room/FriendRoomService`：创建、加入、准备、开局、离开和观察好友房。
