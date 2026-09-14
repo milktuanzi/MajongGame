@@ -75,10 +75,10 @@ public final class HomeController {
         }
         roundsBox.getItems().setAll("4 轮", "8 轮", "16 轮");
         multiplierBox.getItems().setAll("1 倍", "2 倍", "5 倍", "10 倍");
-        scoreCapBox.getItems().setAll("不封顶", "64 分", "128 分", "256 分");
+        scoreCapBox.getItems().setAll("不封顶", "64 倍", "128 倍", "256 倍");
         roundsBox.setValue("8 轮");
         multiplierBox.setValue("2 倍");
-        scoreCapBox.setValue("128 分");
+        scoreCapBox.setValue("128 倍");
         refreshLeaderboard();
     }
 

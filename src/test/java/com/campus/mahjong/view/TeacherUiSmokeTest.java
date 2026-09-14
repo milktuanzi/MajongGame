@@ -30,7 +30,7 @@ class TeacherUiSmokeTest {
         Platform.runLater(() -> { try { result.complete(action.call()); } catch(Throwable error) { result.completeExceptionally(error); } });
         return result.get(12,TimeUnit.SECONDS);
     }
-    @Test void waitingRoomGameAndCitedHistoryRenderAtDesktopSizes() throws Exception {
+    @Test void waitingRoomAndGameRenderWithoutTeacherFooterAtDesktopSizes() throws Exception {
         Platform.startup(() -> Platform.setImplicitExit(false));
         var settings=new FriendRoomSettings(ModeCode.SICHUAN,1,Optional.of(128),2,false,"",true);
         var profile=new PlayerProfile(new PlayerId("ui-student"),"练习同学","",0,1);
@@ -58,27 +58,15 @@ class TeacherUiSmokeTest {
             }
             assertFalse(host.teacherHistory().isEmpty());
             fx(() -> {
-                assertTrue(((Label)stage.getScene().lookup("#teacherTitle")).getText().contains("打出"));
-                assertFalse(((Label)stage.getScene().lookup("#teachingHint")).getText().isBlank());
-                CheckBox toggle=(CheckBox)stage.getScene().lookup("#textExplanations");
-                toggle.fire();
-                assertFalse(stage.getScene().lookup("#teacherContent").isVisible());
-                assertFalse(stage.getScene().lookup("#teacherContent").isManaged());
-                assertTrue(((Button)stage.getScene().lookup("#teacherHistoryButton")).isDisabled());
-                shot("teacher-text-off",stage);
-                toggle.fire();
-                assertTrue(stage.getScene().lookup("#teacherContent").isVisible());
+                assertNull(stage.getScene().lookup("#teacherTitle"));
+                assertNull(stage.getScene().lookup("#teachingHint"));
+                assertNull(stage.getScene().lookup("#textExplanations"));
+                assertNull(stage.getScene().lookup("#teacherContent"));
+                assertNull(stage.getScene().lookup("#teacherHistoryButton"));
                 shot("teacher-game-1280",stage);
                 stage.setWidth(1024); stage.setHeight(720); return null;
             });
-            fx(() -> { shot("teacher-game-1024",stage); ((Button)stage.getScene().lookup("#teacherHistoryButton")).fire(); return null; });
-            fx(() -> {
-                Stage history=(Stage)Window.getWindows().stream().filter(w -> w instanceof Stage s && "机器人老师 · 出牌依据".equals(s.getTitle())).findFirst().orElseThrow();
-                TextArea text=(TextArea)history.getScene().lookup(".text-area");
-                assertTrue(text.getText().contains("COMMON-DISCARD"));
-                assertTrue(text.getText().contains("规则约束"));
-                shot("teacher-history",history); history.close(); return null;
-            });
+            fx(() -> { shot("teacher-game-1024",stage); return null; });
         } finally {
             fx(() -> { for(var window:List.copyOf(Window.getWindows())) window.hide(); return null; });
             LanSession.closeCurrent(); Platform.exit();

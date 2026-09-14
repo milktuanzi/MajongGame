@@ -30,7 +30,7 @@ public final class DemoSession {
     public static ModeCode mode = ModeCode.SICHUAN;
     public static String rounds = "8 轮";
     public static String multiplier = "2 倍";
-    public static String scoreCap = "128 分";
+    public static String scoreCap = "128 倍";
 
     private static final List<PlayerState> players = new ArrayList<>();
     private static final List<String> hand = new ArrayList<>();
@@ -191,7 +191,7 @@ public final class DemoSession {
         mode = ModeCode.SICHUAN;
         FriendRoomSettings settings = new FriendRoomSettings(ModeCode.SICHUAN,
                 Integer.parseInt(multiplier.replace("倍", "").trim()),
-                scoreCap.equals("不封顶") ? Optional.empty() : Optional.of(Integer.parseInt(scoreCap.replace("分", "").trim())),
+                scoreCap.equals("不封顶") ? Optional.empty() : Optional.of(Integer.parseInt(scoreCap.replace("倍", "").trim())),
                 totalRounds(), false, "");
         matchId = UUID.randomUUID().toString();
         match = new com.campus.mahjong.model.game.MahjongMatch(settings, System.nanoTime(), currentRound);

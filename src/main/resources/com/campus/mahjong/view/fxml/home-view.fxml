@@ -45,7 +45,7 @@
      <GridPane hgap="12" vgap="12"><columnConstraints><ColumnConstraints percentWidth="50"/><ColumnConstraints percentWidth="50"/></columnConstraints>
       <VBox spacing="7"><Label text="游戏轮次" styleClass="lobby-field-label"/><ComboBox fx:id="roundsBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
       <VBox spacing="7" GridPane.columnIndex="1"><Label text="基础倍率" styleClass="lobby-field-label"/><ComboBox fx:id="multiplierBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
-      <VBox spacing="7" GridPane.rowIndex="1" GridPane.columnSpan="2"><Label text="积分封顶" styleClass="lobby-field-label"/><ComboBox fx:id="scoreCapBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
+      <VBox spacing="7" GridPane.rowIndex="1" GridPane.columnSpan="2"><Label text="封顶倍数" styleClass="lobby-field-label"/><ComboBox fx:id="scoreCapBox" maxWidth="Infinity" styleClass="lobby-select"/></VBox>
      </GridPane>
      <Button fx:id="teachingButton" text="开始教学 · 三位老师陪练" onAction="#startTeaching" maxWidth="Infinity" styleClass="secondary-button"/>
      <Label text="所选玩法练习一轮 · 操作建议与点评 · 不计入排行榜" wrapText="true"/>

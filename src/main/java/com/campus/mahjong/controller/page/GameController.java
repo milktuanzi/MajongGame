@@ -116,76 +116,6 @@ public final class GameController {
             if (!row.getChildren().isEmpty()) tileCounterRows.getChildren().add(row);
         }
     }
-    @FXML private javafx.scene.control.CheckBox textExplanations;
-    @FXML private VBox teacherContent;
-    @FXML private Label teachingHint;
-    private static boolean explanationsEnabled = true;
-    private final com.campus.mahjong.model.ai.TeacherBotPolicy teachingPolicy =
-            new com.campus.mahjong.model.ai.TeacherBotPolicy(new com.campus.mahjong.model.ai.RuleKnowledgeBase());
-    @FXML private Label teacherTitle;
-    @FXML private Label teacherSummary;
-    @FXML private Button teacherHistoryButton;
-    private AutoCloseable teacherSubscription;
-    private javafx.stage.Stage teacherStage;
-    private final javafx.collections.ObservableList<com.campus.mahjong.model.ai.TeacherLesson> lessons = javafx.collections.FXCollections.observableArrayList();
-
-    private void receiveTeacherLesson(com.campus.mahjong.model.ai.TeacherLesson lesson) {
-        int existing = -1;
-        for (int i = 0; i < lessons.size(); i++) if (lessons.get(i).id().equals(lesson.id())) { existing = i; break; }
-        if (existing < 0) lessons.add(lesson); else lessons.set(existing, lesson);
-        while (lessons.size() > 100) lessons.removeFirst();
-        var latest = lessons.getLast();
-        teacherTitle.setText((lanSession != null && latest.seat() == localSeat() ? "老师点评 · 第 " : "机器人老师 · 第 ") + latest.round() + " 轮 · " + seatName(latest.seat()) + "家打出" + latest.tile());
-        teacherSummary.setText(latest.explanation());
-    }
-    private void updateTeachingHint() {
-        teachingHint.setText("");
-        if (lanSession == null || networkGame == null) return;
-        var settings = lanSession.currentRoom().orElseThrow().settings().orElseThrow();
-        if (!settings.teachingMode()) return;
-        teachingPolicy.choose(settings.mode(), localSeat(), networkGame).ifPresentOrElse(choice -> {
-            String action = switch (choice.type()) {
-                case EXCHANGE_THREE -> "换出三张";
-                case DING_QUE -> "定缺花色（用一张代表牌表示）";
-                case DISCARD -> "打出";
-                case HU -> "胡牌";
-                case PASS -> "过";
-                default -> choice.type().name();
-            };
-            String tiles = choice.tiles().stream().map(Tile::code).collect(java.util.stream.Collectors.joining("、"));
-            teachingHint.setText("老师建议 · " + action + tiles + "\n" + choice.reason());
-        }, () -> teachingHint.setText("观察老师的出牌依据，轮到你时会给出建议。"));
-    }
-
-    @FXML private void showTeacherHistory() {
-        if (teacherStage != null) { teacherStage.show(); teacherStage.toFront(); return; }
-        var list = new javafx.scene.control.ListView<com.campus.mahjong.model.ai.TeacherLesson>(lessons);
-        list.setPrefWidth(210);
-        list.setPlaceholder(new Label("老师出牌后，讲解会出现在这里"));
-        list.setCellFactory(ignored -> new javafx.scene.control.ListCell<>() {
-            @Override protected void updateItem(com.campus.mahjong.model.ai.TeacherLesson item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : "第 " + item.round() + " 轮 · " + seatName(item.seat()) + "家 · " + item.tile());
-            }
-        });
-        var text = new javafx.scene.control.TextArea("选择一次出牌，查看规则约束、策略依据和引用原文。\n当前底层为 Mock，不消耗 API 余额。");
-        text.setEditable(false); text.setWrapText(true); text.setStyle("-fx-font-size: 15px;");
-        list.getSelectionModel().selectedItemProperty().addListener((obs, before, item) -> {
-            if (item == null) return;
-            String references = item.citations().stream().map(c -> "[" + c.id() + "] " + c.title() + " · " + c.version() + "\n" + c.text())
-                    .collect(java.util.stream.Collectors.joining("\n\n"));
-            text.setText("第 " + item.round() + " 轮 · " + seatName(item.seat()) + "家打出 " + item.tile() + "\n讲解来源：" + item.status()
-                    + "\n\n" + (item.enhancement().isBlank() ? item.explanation() : item.enhancement()) + "\n\n引用原文\n" + references);
-            text.positionCaret(0);
-        });
-        var split = new javafx.scene.control.SplitPane(list, text); split.setDividerPositions(.25);
-        teacherStage = new javafx.stage.Stage(); teacherStage.initOwner(tableViewport.getScene().getWindow());
-        teacherStage.setTitle("机器人老师 · 出牌依据"); teacherStage.setScene(new javafx.scene.Scene(split, 880, 560));
-        teacherStage.setMinWidth(640); teacherStage.setMinHeight(360);
-        teacherStage.setOnCloseRequest(event -> { event.consume(); teacherStage.hide(); });
-        teacherStage.show(); list.getSelectionModel().selectLast();
-    }
-
     @FXML private StackPane tableViewport;
     @FXML private Pane tableBoard;
     @FXML private HBox bottomMeldPane;
@@ -303,19 +233,6 @@ public final class GameController {
     private void initializeNetworkGame(LanSession session) {
         lanSession = session;
         networkGame = session.currentGame().orElseThrow();
-        textExplanations.setSelected(explanationsEnabled);
-        teacherContent.visibleProperty().bind(textExplanations.selectedProperty());
-        teacherContent.managedProperty().bind(textExplanations.selectedProperty());
-        teacherHistoryButton.disableProperty().bind(textExplanations.selectedProperty().not());
-        teachingHint.managedProperty().bind(teachingHint.textProperty().isNotEmpty());
-        teachingHint.visibleProperty().bind(teachingHint.managedProperty());
-        textExplanations.selectedProperty().addListener((obs, oldValue, enabled) -> {
-            explanationsEnabled = enabled;
-            if (!enabled && teacherStage != null) teacherStage.hide();
-            if (enabled) updateTeachingHint();
-        });
-        teacherSubscription = session.observeTeacher(lesson -> runOnFx(() -> receiveTeacherLesson(lesson)));
-        session.teacherHistory().forEach(this::receiveTeacherLesson);
         lastWinSequence = networkGame.winEvents().stream().mapToInt(com.campus.mahjong.model.game.WinEvent::sequence).max().orElse(0);
         if (networkGame.status() == GameStatus.FINISHED) { Platform.runLater(this::showFinalSettlement); return; }
         updateNetworkLabels();
@@ -330,7 +247,6 @@ public final class GameController {
         roomLabel.setText((lanSession.currentRoom().orElseThrow().settings().orElseThrow().teachingMode() ? "教学模式 · " : "好友房 · ") + lanSession.invitation().substring(lanSession.invitation().lastIndexOf('#') + 1));
         long score = localPublicState().map(PlayerPublicState::score).orElse(0L);
         scoreLabel.setText("本房积分 " + signed(score));
-        updateTeachingHint();
         EnumSet<PlayerActionType> actions = currentActions();
         if (networkGame.status() == GameStatus.FINISHED) {
             actionTip.setText("所有轮次已结束");
@@ -963,8 +879,6 @@ public final class GameController {
     }
 
     private void closeGameSubscription() {
-        if (teacherSubscription != null) { try { teacherSubscription.close(); } catch (Exception ignored) {} teacherSubscription = null; }
-        if (teacherStage != null) { teacherStage.close(); teacherStage = null; }
         if (gameSubscription == null) return;
         try { gameSubscription.close(); } catch (Exception ignored) {}
         gameSubscription = null;

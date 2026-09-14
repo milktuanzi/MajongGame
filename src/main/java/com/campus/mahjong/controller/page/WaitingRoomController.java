@@ -212,7 +212,7 @@ public final class WaitingRoomController {
         roomCodeLabel.setText(lanSession.roomCode());
         invitationLabel.setText(lanSession.invitation());
         FriendRoomSettings settings = room.settings().orElseThrow();
-        String cap = settings.scoreCap().map(value -> value + " 分封顶").orElse("不封顶");
+        String cap = settings.scoreCap().map(value -> value + " 倍封顶").orElse("不封顶");
         settingsLabel.setText((settings.teachingMode() ? "教学陪练 · " : "") + modeNames.get(settings.mode()) + " · " + settings.rounds() + " 轮 · "
                 + settings.baseMultiplier() + " 倍 · " + cap);
 
