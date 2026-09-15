@@ -466,7 +466,10 @@ public final class GameController {
             handPane.getChildren().add(drawn);
             String key = (lanSession == null ? DemoSession.currentRound() : networkGame.currentRound()) + ":"
                     + (lanSession == null ? DemoSession.remainingTiles() : networkGame.wallRemaining()) + ":" + tileName;
-            if (animateDraw && !key.equals(lastDrawKey) && !REDUCED_MOTION) animateDraw(drawn);
+            // 自摸胡牌张会继续保留在最右侧。其他玩家摸牌会改变牌墙数量，不能因此将它误判为新摸牌。
+            if (shouldAnimateDraw(animateDraw, REDUCED_MOTION, winners.contains(localSeat()), key, lastDrawKey)) {
+                animateDraw(drawn);
+            }
             lastDrawKey = key;
         });
 
@@ -794,6 +797,11 @@ public final class GameController {
         FadeTransition fade = new FadeTransition(Duration.millis(240), tile); fade.setToValue(1);
         TranslateTransition slide = new TranslateTransition(Duration.millis(240), tile); slide.setToY(0); slide.setInterpolator(Interpolator.EASE_OUT);
         new ParallelTransition(fade, slide).play();
+    }
+
+    static boolean shouldAnimateDraw(boolean requested, boolean reducedMotion, boolean localPlayerHasWon,
+                                     String drawKey, String previousDrawKey) {
+        return requested && !reducedMotion && !localPlayerHasWon && !drawKey.equals(previousDrawKey);
     }
 
     private void scheduleSimulationStep() {
